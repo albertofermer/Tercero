@@ -1,0 +1,22 @@
+
+/**
+ * Conjunto de funciones para acceder a la consola
+ */
+library Console {
+  
+  /**
+   * Escribe un carácter en la consola
+   */
+  public void print(char c) 
+  {
+  }
+
+  /**
+   * Escribe un número entero en la consola
+   */
+  public void print(int i) 
+  {
+  }
+  
+ 
+}

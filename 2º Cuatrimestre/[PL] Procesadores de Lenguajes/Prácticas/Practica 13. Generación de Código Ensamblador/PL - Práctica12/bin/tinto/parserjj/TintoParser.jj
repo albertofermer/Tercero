@@ -1,0 +1,1896 @@
+options {
+  STATIC=false;
+}
+PARSER_BEGIN(TintoParser)
+//------------------------------------------------------------------//
+//                        COPYRIGHT NOTICE                          //
+//------------------------------------------------------------------//
+// Copyright (c) 2017, Francisco José Moreno Velo                   //
+// All rights reserved.                                             //
+//                                                                  //
+// Redistribution and use in source and binary forms, with or       //
+// without modification, are permitted provided that the following  //
+// conditions are met:                                              //
+//                                                                  //
+// * Redistributions of source code must retain the above copyright //
+//   notice, this list of conditions and the following disclaimer.  // 
+//                                                                  //
+// * Redistributions in binary form must reproduce the above        // 
+//   copyright notice, this list of conditions and the following    // 
+//   disclaimer in the documentation and/or other materials         // 
+//   provided with the distribution.                                //
+//                                                                  //
+// * Neither the name of the University of Huelva nor the names of  //
+//   its contributors may be used to endorse or promote products    //
+//   derived from this software without specific prior written      // 
+//   permission.                                                    //
+//                                                                  //
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND           // 
+// CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,      // 
+// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF         // 
+// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE         // 
+// DISCLAIMED. IN NO EVENT SHALL THE COPRIGHT OWNER OR CONTRIBUTORS //
+// BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,         // 
+// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED  //
+// TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,    //
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND   // 
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT          //
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   //
+// IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF   //
+// THE POSSIBILITY OF SUCH DAMAGE.                                  //
+//------------------------------------------------------------------//
+
+//------------------------------------------------------------------//
+//                      Universidad de Huelva                       //
+//          Departamento de Tecnologías de la Información           //
+//   Área de Ciencias de la Computación e Inteligencia Artificial   //
+//------------------------------------------------------------------//
+//                     PROCESADORES DE LENGUAJE                     //
+//------------------------------------------------------------------//
+//                                                                  //
+//                  Compilador del lenguaje Tinto                   //
+//                                                                  //
+//------------------------------------------------------------------//
+
+
+package tinto.parserjj;
+
+import tinto.ast.*;
+import tinto.ast.expression.*;
+import tinto.ast.statement.*;
+import tinto.ast.struct.*;
+
+public class TintoParser {
+
+	//----------------------------------------------------------------//
+	//                        Miembros privados                       //
+	//----------------------------------------------------------------//
+
+	/**
+	 * Contador de errores
+	 */
+	private int errorCount;
+	
+	/**
+	 * Mensaje de errores
+	 */
+	private String errorMsg;
+
+	//----------------------------------------------------------------//
+	//               Método que desarrolla el análisis                //
+	//----------------------------------------------------------------//
+
+	/**
+	 * Analiza un fichero ".tinto" añadiendo la información del cuerpo de los métodos
+	 */
+	public void parse(String name, SymbolTable symtab)
+	{
+	    this.errorCount = 0;
+	    this.errorMsg = "";
+		try
+		{
+		  	symtab.setActiveLibrary(name);
+			CompilationUnit(symtab);
+		}
+		catch(Exception e)
+		{
+		    catchError(e);
+		}
+	}
+	
+	//----------------------------------------------------------------//
+	//       Métodos relacionados con el tratamiento de errores       //
+	//----------------------------------------------------------------//
+
+	/**
+	 * Obtiene el número de errores del análisis
+	 * @return
+	 */
+	public int getErrorCount()
+	{
+		return this.errorCount;
+	}
+	
+	/**
+	 * Obtiene el mensaje de error del análisis
+	 * @return
+	 */
+	public String getErrorMsg()
+	{
+		return this.errorMsg;
+	}
+	
+	/**
+	 * Almacena un error de análisis
+	 * @param ex
+	 */
+	private void catchError(Exception ex)
+	{
+		this.errorCount++;
+		this.errorMsg += ex.toString();
+	}
+
+	//----------------------------------------------------------------//
+	//                Métodos de verificación semántica               //
+	//----------------------------------------------------------------//
+
+	/**
+	 * Verifica que la sentencia a añadir a un bloque es alcanzable
+	 */
+	private void verifyUnreachableCode(Statement stm, BlockStatement block)
+	{
+		if(stm != null && block.returns() )
+		{
+			int errorcode = SemanticException.UNREACHABLE_CODE;
+			catchError(new SemanticException(errorcode,getToken(0)));
+		}
+	}
+
+	/**
+	 * Verifica que el código de una función alcanza siempre un return
+	 */
+	private void verifyUnfinishedFunction(Token tk, BlockStatement body, SymbolTable symtab)
+	{
+	    int type = symtab.getActiveFunction().getType();
+		if(!TypeSystem.isVoid(type) && !body.returns() )
+		{
+			int errorcode = SemanticException.UNFINISHED_FUNCTION;
+			catchError(new SemanticException(errorcode,tk));
+		}
+	}
+
+	/**
+	 * Verifica que una variable no esté duplicada
+	 */
+	private void verifyDuplicatedVariable(Token tk, SymbolTable symtab)
+	{
+		if(symtab.getVariableInScope(tk.image)!=null)
+		{
+			int errorcode = SemanticException.DUPLICATED_VARIABLE_EXCEPTION;
+			catchError(new SemanticException(errorcode,tk));
+		}
+	}
+
+	/**
+	 * Verifica que una condición sea de tipo booleana.
+	 */
+	private void verifyConditionType(Token tk, Expression expr)
+	{
+		if(!TypeSystem.isBoolean( expr.getType() ))
+		{
+			int errorcode = SemanticException.INVALID_CONDITION_EXCEPTION;
+			catchError(new SemanticException(errorcode,tk));
+		}
+	}
+
+	/**
+	 * Verifica que una instrucción return devuelve un tipo de dato correcto
+	 */
+	private void verifyReturnType(Token tk, Expression expr, SymbolTable symtab)
+	{
+		int type = symtab.getActiveFunction().getType();
+		if(expr == null && !TypeSystem.isVoid(type))
+		{
+			int errorcode = SemanticException.INVALID_RETURN_EXCEPTION;
+			catchError(new SemanticException(errorcode,tk));
+		}
+		if(expr != null && !TypeSystem.isAssignable(type,expr.getType()))
+		{
+			int errorcode = SemanticException.INVALID_RETURN_EXCEPTION;
+			catchError(new SemanticException(errorcode,tk));
+		}
+	}
+
+	/**
+	 * Verifica la existencia una variable de una instrucción de asignación
+	 */
+	private void verifyUnknownVariable(Token tk, SymbolTable symtab)
+	{
+		if(symtab.getVariable(tk.image) == null)
+		{
+			int errorcode = SemanticException.UNKNOWN_VARIABLE_EXCEPTION;
+			catchError(new SemanticException(errorcode,tk));
+		}
+	}
+
+	/** 
+	 * Verifica que los tipos de datos en una instrucción de asignación son correctos
+	 */
+	private void verifyAssignTypes(Token tk, Variable var, Expression expr)
+	{
+		if(!TypeSystem.isAssignable(var.getType(),expr.getType()))
+		{
+			int errorcode = SemanticException.TYPE_MISMATCH_EXCEPTION;
+			catchError(new SemanticException(errorcode,tk));
+		}		
+	}
+
+	/**
+	 * Verifica la existencia de una biblioteca en la tabla de símbolos
+	 */
+	private void verifyUnknownLibrary(Token tk, SymbolTable symtab)
+	{
+		if(symtab.getLibrary(tk.image) == null)
+		{
+			int errorcode = SemanticException.UNKNOWN_LIBRARY_EXCEPTION;
+			catchError(new SemanticException(errorcode,tk));
+		}
+	}
+	
+	/**
+	 * Verifica la existencia de una función en la biblioteca activa
+	 */
+	private void verifyUnknownFunction(Token tk, CallParameters param, SymbolTable symtab)
+	{
+		if(symtab.getActiveLibrary().getAnyFunction(tk.image,param.getTypes()) == null)
+		{
+			int errorcode = SemanticException.UNKNOWN_FUNCTION_EXCEPTION;
+			catchError(new SemanticException(errorcode,tk));
+		}
+	}
+	
+	/**
+	 * Verifica la existencia de una función pública en una cierta biblioteca
+	 */
+	private void verifyUnknownFunction(Token tk, CallParameters param, LibraryDeclaration library)
+	{
+		if(library.getPublicFunction(tk.image,param.getTypes()) == null)
+		{
+			int errorcode = SemanticException.UNKNOWN_FUNCTION_EXCEPTION;
+			catchError(new SemanticException(errorcode,tk));
+		}
+	}
+
+	/**
+	 * Verifica que los dos operandos de una expresión lógica (AND, OR) sean booleanos
+	 */
+	private void verifyBooleanTypes(Token tk, Expression exp1, Expression exp2)
+	{
+		if(!TypeSystem.isBoolean(exp1.getType()) || !TypeSystem.isBoolean(exp2.getType()))
+		{
+			int errorcode = SemanticException.TYPE_MISMATCH_EXCEPTION;
+			catchError(new SemanticException(errorcode,tk));
+		}
+	}
+
+	/**
+	 * Verifica que los tipos de los dos operandos de una relación sean correctos
+	 */
+	private void verifyRelationTypes(Token tk, int relop, Expression exp1, Expression exp2)
+	{
+		switch(relop)
+		{
+			case BinaryExpression.EQ:
+			case BinaryExpression.NEQ:
+				if(!TypeSystem.isComparable(exp1.getType(),exp2.getType()))
+				{
+					int errorcode = SemanticException.TYPE_MISMATCH_EXCEPTION;
+					catchError(new SemanticException(errorcode,tk));
+				}
+				break;
+			case BinaryExpression.GT:
+			case BinaryExpression.GE:
+			case BinaryExpression.LT:
+			case BinaryExpression.LE:
+				if(!TypeSystem.isOrderable(exp1.getType(),exp2.getType()))
+				{
+					int errorcode = SemanticException.TYPE_MISMATCH_EXCEPTION;
+					catchError(new SemanticException(errorcode,tk));
+				}
+				break;
+		}
+	}
+
+	/**
+	 * Verifica que una expresión sea de tipo booleana (para poder apilcar NOT).
+	 */
+	private void verifyBooleanType(Token tk, Expression expr)
+	{
+		if(!TypeSystem.isBoolean( expr.getType() ))
+		{
+			int errorcode = SemanticException.TYPE_MISMATCH_EXCEPTION;
+			catchError(new SemanticException(errorcode,tk));
+		}
+	}
+
+	/**
+	 * Verifica que dos expresiones sean de tipo numérico (para poder aplicar '+' y '-').
+	 */
+	private void verifyNumericType(Token tk, Expression exp)
+	{
+		if(!TypeSystem.isNumeric(exp.getType()))
+		{
+			int errorcode = SemanticException.TYPE_MISMATCH_EXCEPTION;
+			catchError(new SemanticException(errorcode,tk));
+		}
+	}
+	
+	/**
+	 * Verifica que dos expresiones sean de tipo numérico (para poder aplicar '+','-','*'y'/').
+	 */
+	private void verifyNumericTypes(Token tk, Expression exp1, Expression exp2)
+	{
+		if(!TypeSystem.isNumeric( exp1.getType() ) || !TypeSystem.isNumeric( exp2.getType() ))
+		{
+			int errorcode = SemanticException.TYPE_MISMATCH_EXCEPTION;
+			catchError(new SemanticException(errorcode,tk));
+		}
+	}
+
+	/**
+	 * Verifica que dos expresiones sean de tipo entero (para poder aplicar '%').
+	 */
+	private void verifyIntegerTypes(Token tk, Expression exp1, Expression exp2)
+	{
+		if(!TypeSystem.isInteger( exp1.getType() ) || !TypeSystem.isInteger( exp2.getType() ))
+		{
+			int errorcode = SemanticException.TYPE_MISMATCH_EXCEPTION;
+			catchError(new SemanticException(errorcode,tk));
+		}
+	}
+
+	/**
+	 * Verifica que el valor de un literal entero sea correcto
+	 */
+	private void verifyIntegerValue(Token tk)
+	{
+		try
+		{
+	    	if(tk.image.startsWith("0x") || tk.image.startsWith("0X")) Integer.parseInt(tk.image.substring(2),16);
+	    	if(tk.image.startsWith("0b") || tk.image.startsWith("0B")) Integer.parseInt(tk.image.substring(2),2);
+	    	else if(tk.image.startsWith("0")) Integer.parseInt(tk.image,8);
+	    	else Integer.parseInt(tk.image);
+		}
+		catch(Exception e)
+		{
+			int errorcode = SemanticException.NUMBER_FORMAT_EXCEPTION;
+			catchError(new SemanticException(errorcode,tk));
+		}
+	}
+	
+	//----------------------------------------------------------------//
+	//       Métodos relacionados con las aciones semánticas          //
+	//----------------------------------------------------------------//
+
+	/**
+	 * Acción seántica asociada a añadir un tipo de argumento a una
+	 * lista de tipos
+	 */
+	private int[] actionAddArgumentType(int type, int[]args)
+	{
+		int[] nl = new int[args.length+1];
+		System.arraycopy(args,0,nl,0,args.length);
+		nl[args.length] = type;
+		return nl;
+	}
+
+	/**
+     * Acción semántica asociada a añadir una instrucción a un bloque de
+     * instrucciones.
+     */
+    private void actionAddStatement(BlockStatement block, Statement stm)
+    {
+    	if(stm == null) return;
+    	verifyUnreachableCode(stm,block);
+    	block.addStatement(stm);
+    }
+
+    /**
+     * Acción semántica asociada a la asignación del cuerpo de una función
+     */
+    private void actionSetFunctionBody(Token tk, BlockStatement block, SymbolTable symtab)
+    {
+    	verifyUnfinishedFunction(tk,block,symtab);
+    	symtab.getActiveFunction().setBody(block);
+    }
+
+	/**
+	 * Acción semántica asociada al reconocimiento de una declaración de variable
+	 */
+	private Variable actionAddDeclaration(SymbolTable symtab,int type,Token tid)
+	{
+		verifyDuplicatedVariable(tid, symtab);
+		Variable var = new Variable(type, tid.image);
+		symtab.addLocalVariable(var);
+		return var;
+	}
+
+	/**
+	 * Acción semántica asociada al reconocimiento de una asignación
+	 */
+	private void actionAddAssignement(BlockStatement block, Variable var, Expression exp)
+	{
+		if(exp != null)
+		{
+			AssignStatement stm = new AssignStatement(var,exp);
+			block.addStatement(stm);
+		}									
+	}
+	
+	/**
+	 * Acción semántica que obtiene la instrucción asociada a una declaración
+	 * de variables. Si no hay inicializaciones devuelve null. Si sólo hay una
+	 * devuelve esa asignación. Si hay más de una devuelve el bloque de
+	 * asignaciones.
+	 */
+	private Statement actionGetStatementFromBlock(BlockStatement block)
+	{
+		Statement[] list = block.getStatementList();
+		if(list.length == 0) return null;
+		if(list.length == 1) return list[0];
+		return block;
+	}
+
+	/**
+	 * Acción semántica asociada a la creación de una instrucción if
+	 */
+	private Statement actionIfStatement(Token tk, Expression cond, Statement thenStm, Statement elseStm)
+	{
+		verifyConditionType(tk,cond);
+		return new IfStatement(cond,thenStm,elseStm);
+	}
+
+    /**
+     * Acción semántica asociada a la creación de una instrucción while
+     */
+	private Statement actionWhileStatement(Token tk, Expression cond, Statement body)
+    {
+		verifyConditionType(tk,cond);
+		return new WhileStatement(cond,body);
+    }
+
+    /**
+     * Acción asociada a la creación de una instrucción return
+     */
+	private Statement actionReturnStatement(Token tk, Expression exp, SymbolTable symtab)
+	{
+		verifyReturnType(tk,exp,symtab);
+		return new ReturnStatement(exp);
+	}
+
+	/**
+	 * Acción semántica asociada al reconocimiento de una instrucción de asignación
+	 */
+	private Statement actionAssignStatement(Token tk, Expression exp, SymbolTable symtab)
+	{
+		verifyUnknownVariable(tk,symtab);
+		Variable var = symtab.getVariable(tk.image);
+		verifyAssignTypes(tk,var,exp);
+		return new AssignStatement(var,exp);
+	}
+
+	/**
+	 * Acción semántica asociada al reconocimiento de una llamada a un método
+	 * de la misma biblioteca
+	 */
+	private Statement actionCallStatement(Token tk, CallParameters param, SymbolTable symtab)
+	{
+		verifyUnknownFunction(tk,param,symtab);		
+		Function called = symtab.getActiveLibrary().getAnyFunction(tk.image,param.getTypes());
+		CallExpression exp = new CallExpression(called,param,symtab.getActiveLibrary());
+		return new CallStatement(exp);
+	}
+	
+	/**
+	 * Acción semántica asociada al reconocimiento de una llamada a un método
+	 * de una biblioteca importada
+	 */
+	private Statement actionCallStatement(Token tid1, Token tid2, CallParameters param, SymbolTable symtab)
+	{
+		verifyUnknownLibrary(tid1,symtab); 
+		LibraryDeclaration lib = symtab.getLibrary(tid1.image);
+		verifyUnknownFunction(tid2,param,lib);
+		Function called = lib.getPublicFunction(tid2.image,param.getTypes());
+		CallExpression exp = new CallExpression(called,param,lib);
+		return new CallStatement(exp);
+	}
+
+	/**
+	 * Acción semántica que crea una expresión binaria que define un OR entre
+	 * dos expresiones
+	 */
+	private Expression actionOrExpression(Token tk,Expression exp1, Expression exp2)
+	{
+		if(exp1 == null || exp2 == null) return null;
+		verifyBooleanTypes(tk,exp1,exp2);
+		int op = BinaryExpression.OR;
+		Expression exp = new BinaryExpression(op, exp1, exp2);
+		return exp; 
+	}
+
+	/**
+	 * Acción semántica que crea una expresión binaria que define un AND entre
+	 * dos expresiones
+	 */
+	private Expression actionAndExpression(Token tk,Expression exp1, Expression exp2)
+	{
+		if(exp1 == null || exp2 == null) return null;
+		verifyBooleanTypes(tk,exp1,exp2);
+		int op = BinaryExpression.AND;
+		Expression exp = new BinaryExpression(op, exp1, exp2);
+		return exp; 
+	}
+
+	/**
+	 * Acción semántica que crea una expresión binaria que define una relación entre
+	 * dos expresiones.
+	 */
+	private Expression actionRelExpression(Token tk, int op, Expression exp1, Expression exp2)
+	{
+		if(exp1 == null || exp2 == null) return null;
+		verifyRelationTypes(tk,op,exp1,exp2);
+		Expression exp = new BinaryExpression(op, exp1, exp2);
+		return exp; 
+	}
+
+	/**
+	 * Acción semántica que crea una expresión unaria sobre otra expresión.
+	 */
+	private Expression actionUnaryExpression(Token tk, int op, Expression exp)
+	{
+		switch(op)
+		{
+			case UnaryExpression.NONE: 
+				return exp;
+			case UnaryExpression.NOT: 
+				verifyBooleanType(tk,exp); 
+				return new UnaryExpression(op,exp);
+			case UnaryExpression.MINUS:
+				verifyNumericType(tk,exp); 
+				return new UnaryExpression(op,exp);
+			case UnaryExpression.PLUS:
+				verifyNumericType(tk,exp); 
+				return exp;
+		}
+		return exp; 
+	}
+	
+	/**
+	 * Acción semántica que crea una expresión binaria en forma de suma o resta
+	 */
+	private Expression actionSumExpression(Token tk,int op, Expression exp1, Expression exp2)
+	{
+		if(exp1 == null || exp2 == null) return null;
+		verifyNumericTypes(tk,exp1,exp2);
+		Expression exp = new BinaryExpression(op, exp1, exp2);
+		return exp; 
+	}
+
+	/**
+	 * Acción semántica que crea una expresión binaria en forma de suma o resta
+	 */
+	private Expression actionProdExpression(Token tk,int op, Expression exp1, Expression exp2)
+	{
+		if(exp1 == null || exp2 == null) return null;
+		if(op == BinaryExpression.MOD) verifyIntegerTypes(tk,exp1,exp2);
+		else verifyNumericTypes(tk,exp1,exp2);
+		Expression exp = new BinaryExpression(op, exp1, exp2);
+		return exp; 
+	}
+
+	/**
+	 * Acción semántica que crea un literal de tipo entero
+	 */
+	private LiteralExpression actionIntegerLiteral(Token tk)
+	{
+		verifyIntegerValue(tk);
+		return new IntegerLiteralExpression(tk.image); 
+	}
+
+	/**
+	 * Acción semántica que crea una expresión de referencia a una
+	 * variable o a una función
+	 */
+	private Expression actionReferenceExpression(Token tid1,Token tid2,CallParameters param, SymbolTable symtab)
+	{
+		if(param == null) return actionVariableExpression(tid1, symtab);
+		else if(tid2 == null) return actionCallExpression(tid1,param,symtab);
+		else return actionCallExpression(tid1,tid2,param,symtab);
+	}
+
+	/**
+	 * Acción semántica que crea una expresión de referencia a una variable
+	 */
+	private Expression actionVariableExpression(Token tid, SymbolTable symtab)
+	{
+		verifyUnknownVariable(tid,symtab);
+		Variable var = symtab.getVariable(tid.image);
+		return new VariableExpression(var);
+	}
+
+	/**
+	 * Acción semántica que crea una expresión de llamada a una función de la
+	 * misma biblioteca
+	 */
+	private Expression actionCallExpression(Token tk, CallParameters param, SymbolTable symtab)
+	{
+		verifyUnknownFunction(tk,param,symtab);		
+		Function called = symtab.getActiveLibrary().getAnyFunction(tk.image,param.getTypes());
+		return new CallExpression(called,param,symtab.getActiveLibrary());
+	}
+	
+	/**
+	 * Acción semántica que crea una expresión de llamada a una función de una
+	 * biblioteca importada
+	 */
+	private Expression actionCallExpression(Token tid1, Token tid2, CallParameters param, SymbolTable symtab)
+	{
+		verifyUnknownLibrary(tid1,symtab); 
+		LibraryDeclaration lib = symtab.getLibrary(tid1.image);
+		verifyUnknownFunction(tid2,param,lib);
+		Function called = lib.getPublicFunction(tid2.image,param.getTypes());
+		return new CallExpression(called,param,lib);
+	}	
+}
+
+PARSER_END(TintoParser)
+
+
+/* WHITE SPACE */
+
+SKIP :
+{
+  " "
+| "\t"
+| "\n"
+| "\r"
+| "\f"
+}
+
+/* COMMENTS */
+
+SKIP :
+{
+  <SINGLE_LINE_COMMENT: "//" ( ~["\n","\r"] )* ("\n" | "\r" | "\r\n") >
+|
+  <MULTI_LINE_COMMENT: "/*" ( ~["*"] | ("*")+ ~["*","/"] )* ("*")+ "/" >
+}
+
+
+/* RESERVED WORDS */
+
+TOKEN :
+{
+  < BOOLEAN: "boolean" >
+| < CHAR: "char" >
+| < ELSE: "else" >
+| < FALSE: "false" >
+| < IF: "if" >
+| < IMPORT: "import" >
+| < INT: "int" >
+| < LIBRARY: "library" >
+| < PRIVATE: "private" >
+| < PUBLIC: "public" >
+| < RETURN: "return" >
+| < TRUE: "true" >
+| < VOID: "void" >
+| < WHILE: "while" >
+}
+
+/* LITERALS */
+
+TOKEN :
+{
+  < INTEGER_LITERAL: ( <DECIMAL_LITERAL> | <HEX_LITERAL> | <OCTAL_LITERAL> | <BINARY_LITERAL> ) >
+|
+  < #DECIMAL_LITERAL: ["1"-"9"] (["0"-"9"])* >
+|
+  < #HEX_LITERAL: "0" ["x","X"] (["0"-"9","a"-"f","A"-"F"])+ >
+|
+  < #OCTAL_LITERAL: "0" (["0"-"7"])* >
+|
+  < #BINARY_LITERAL: "0" ["b","B"] (["0"-"1"])+ >
+|
+  < CHAR_LITERAL:
+      "'"
+      (   (~["'","\\","\n","\r"])
+        | ("\\"
+            ( ["n","t","b","r","f","\\","'","\""]
+            | ["0"-"7"] ( ["0"-"7"] )?
+            | ["0"-"3"] ["0"-"7"] ["0"-"7"]
+            )
+          )
+      )
+      "'"
+  >
+}
+
+/* IDENTIFIERS */
+
+TOKEN :
+{
+  < IDENTIFIER: ["a"-"z","A"-"Z","_"] ( ["a"-"z","A"-"Z","0"-"9","_"] )* >
+}
+
+/* SEPARATORS */
+
+TOKEN :
+{
+  < LPAREN: "(" >
+| < RPAREN: ")" >
+| < LBRACE: "{" >
+| < RBRACE: "}" >
+| < SEMICOLON: ";" >
+| < COMMA: "," >
+| < DOT: "." >
+}
+
+/* OPERATORS */
+
+TOKEN :
+{
+  < ASSIGN: "=" >
+| < EQ: "==" >
+| < LE: "<=" >
+| < GT: ">" >
+| < LT: "<" >
+| < GE: ">=" >
+| < NE: "!=" >
+| < OR: "||" >
+| < AND: "&&" >
+| < NOT: "!" >
+| < PLUS: "+" >
+| < MINUS: "-" >
+| < PROD: "*" >
+| < DIV: "/" >
+| < MOD: "%" >
+}
+
+
+/**************************************************************/
+/*         EL ANÁLISIS DE LA CABECERA COMIENZA AQUÍ           */
+/**************************************************************/
+
+/**
+ * Reconoce el contenido completo de un archivo ".tinto"
+ *
+ * CompilationUnit ::= (InportClause)* LibraryDecl
+ */
+void CompilationUnit(SymbolTable symtab):
+{}
+{ 
+  ( ImportClause() )*
+  LibraryDecl(symtab)
+}
+
+/**
+ * Reconoce una clausula de importación
+ *
+ * ImportClause ::= <IMPORT> <IDENTIFIER> <SEMICOLON> 
+ */
+void ImportClause():
+{
+}
+{
+  <IMPORT>
+  <IDENTIFIER>
+  <SEMICOLON>
+}
+
+/**
+ * Reconoce la declaración de una biblioteca
+ *
+ * LibraryDecl ::=  <LIBRARY> <IDENTIFIER> <LBRACE> ( FunctionDecl )* <RBRACE> 
+ */
+void LibraryDecl(SymbolTable symtab) :
+{
+}
+{
+  <LIBRARY>
+  <IDENTIFIER>
+  <LBRACE>
+  ( FunctionDecl(symtab) )*
+  <RBRACE> 
+}
+
+/**
+ * Reconoce la declaración de una función
+ *
+ * FunctionDecl ::= Access FunctionType <IDENTIFIER> ArgumentDecl FunctionBody
+ */
+void FunctionDecl(SymbolTable symtab) :
+{
+  Token tid;
+  int[] args;
+}
+{
+  Access()
+  FunctionType()
+  tid = <IDENTIFIER>
+  args = ArgumentDecl()
+  { symtab.setActiveFunction(tid.image, args); }
+  FunctionBody(symtab)
+}
+
+/**
+ * Reconoce un modificador de acceso
+ *
+ * Access ::= <PUBLIC> | <PRIVATE>
+ */
+void Access() :
+{
+}
+{
+  <PUBLIC>
+|
+  <PRIVATE>
+}
+
+/**
+ * Reconoce el tipo de datos que devuelve una función
+ *
+ * FunctionType ::= Type | <VOID>
+ */
+void FunctionType() :
+{
+}
+{
+  tryType()
+|
+  <VOID> 
+}
+
+/**
+ * Reconoce un tipo de datos básico
+ *
+ * Type ::= <INT> | <CHAR> | <BOOLEAN>
+ */
+int tryType() :
+{
+  int[] lsync = { };
+  int[] rsync = { IDENTIFIER };
+  int type = Type.MISMATCH_TYPE;
+}
+{
+  try
+  {
+    type = parseType()
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return type;
+  }
+}
+
+/**
+ * Reconoce un tipo de datos básico
+ *
+ * Type ::= <INT> | <CHAR> | <BOOLEAN>
+ */
+int parseType() :
+{
+  int type;
+}
+{
+  (
+    <INT> { type = Type.INT_TYPE; }
+  |
+    <CHAR> { type = Type.CHAR_TYPE; }
+  |
+    <BOOLEAN> { type = Type.BOOLEAN_TYPE; }
+  )
+  {
+    return type;
+  }
+}
+
+/**
+ * Reconoce la declaración de argumentos de una función
+ *
+ * ArgumentDecl ::= <LPAREN> ( Argument ( <COMMA> Argument )* )? <RPAREN>
+ */
+int[] ArgumentDecl() :
+{
+  int[] args = new int[0];
+}
+{
+  <LPAREN>
+  (
+    args = Argument(args)
+    (
+      <COMMA>
+      args = Argument(args)
+    )*
+  )?
+  <RPAREN>
+  {
+    return args;
+  }
+}
+
+
+/**
+ * Reconoce la declaración de un argumento
+ *
+ * Argument ::= Type <IDENTIFIER>
+ */
+int[] Argument(int[] args) :
+{
+  int type;
+}
+{
+  type = tryType()
+  <IDENTIFIER>
+  {
+    return actionAddArgumentType(type,args);
+  }
+}
+
+/**
+ * Reconoce el cuerpo de una función
+ *
+ * FunctionBody ::= <LBRACE> ( Statement )* <RBRACE>
+ */
+void FunctionBody(SymbolTable symtab) :
+{
+  BlockStatement block = new BlockStatement();
+  Statement stm;
+  Token tk;
+}
+{
+  <LBRACE>
+  (
+    stm = tryStatement(symtab)
+    { actionAddStatement(block,stm); }
+  )*
+  tk = <RBRACE>
+  {
+    actionSetFunctionBody(tk, block, symtab);
+  }
+}
+
+/**************************************************************/
+/*       EL ANÁLISIS DE LAS INSTRUCCIONES COMIENZA AQUÍ       */
+/**************************************************************/
+
+/**
+ * Reconoce una sentencia del lenguaje
+ *
+ * Statement ::= Decl | IdStm | IfStm | WhileStm | ReturnStm | NoStm | BlockStm
+ */
+Statement tryStatement(SymbolTable symtab) :
+{
+  int[] lsync = { SEMICOLON };
+  int[] rsync = { INT, CHAR, BOOLEAN, IF, WHILE, RETURN, RBRACE};
+  Statement stm = null;
+}
+{
+  try
+  {
+    stm = parseStatement(symtab)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return stm;
+  } 
+}
+
+/**
+ * Reconoce una sentencia del lenguaje
+ *
+ * Statement ::= Decl | IdStm | IfStm | WhileStm | ReturnStm | NoStm | BlockStm
+ */
+Statement parseStatement(SymbolTable symtab) :
+{
+  Statement stm;
+}
+{
+  (    stm = tryDecl(symtab)
+  | stm = tryIdStm(symtab)
+  | stm = tryIfStm(symtab)
+  | stm = tryWhileStm(symtab)
+  | stm = tryReturnStm(symtab)
+  | stm = tryNoStm(symtab)
+  | stm = tryBlockStm(symtab)
+  )
+  {
+    return stm;
+  }
+}
+
+/**
+ * Reconoce la declaración de una variable (o una lista de variables)
+ *
+ * Decl ::= Type <IDENTIFIER> Assignement ( <COMMA> <IDENTIFIER> Assignement )* <SEMICOLON>
+ */
+Statement tryDecl(SymbolTable symtab) :
+{
+  int[] lsync = { SEMICOLON };
+  int[] rsync = { INT, CHAR, BOOLEAN, IF, WHILE, RETURN, RBRACE};
+  Statement stm = null;
+}
+{
+  try
+  {
+    stm = parseDecl(symtab)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return stm;
+  }
+}
+
+/**
+ * Reconoce la declaración de una variable (o una lista de variables)
+ *
+ * Decl ::= Type <IDENTIFIER> Assignement ( <COMMA> <IDENTIFIER> Assignement )* <SEMICOLON>
+ */
+Statement parseDecl(SymbolTable symtab) :
+{
+  int type;
+  Token tid;
+  Expression exp;
+  BlockStatement block = new BlockStatement();
+  Variable var;
+}
+{
+  type = tryType()
+  tid = <IDENTIFIER>
+  exp = tryAssignement(symtab)
+  {
+    var = actionAddDeclaration(symtab, type, tid);
+    actionAddAssignement(block,var,exp);
+  }
+  (
+    <COMMA>
+    tid = <IDENTIFIER>
+    exp = tryAssignement(symtab)
+    {
+      var = actionAddDeclaration(symtab, type, tid);
+      actionAddAssignement(block,var,exp);
+    }
+  )*
+  <SEMICOLON>
+  {
+    return actionGetStatementFromBlock(block);
+  }
+}
+
+/**
+ * Reconoce la asignación inicial de una variable
+ *
+ * Assignement ::= ( <ASSIGN>  Expr )? 
+ */
+Expression tryAssignement(SymbolTable symtab) :
+{
+  int[] lsync = { };
+  int[] rsync = { COMMA, SEMICOLON };
+  Expression exp = null;
+}
+{
+  try
+  {
+    exp = parseAssignement(symtab)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return exp;
+  }
+}
+
+/**
+ * Reconoce la asignación inicial de una variable
+ *
+ * Assignement ::= ( <ASSIGN>  Expr )? 
+ */
+Expression parseAssignement(SymbolTable symtab) :
+{
+  Expression exp = null;
+}
+{
+  (
+    <ASSIGN>
+    exp = tryExpr(symtab)
+  )?
+  {
+    return exp;
+  }
+}
+
+/**
+ * Reconoce una instrucción "if".
+ *
+ * IfStm ::= <IF> <LPAREN> Expr <RPAREN> Stm  ( <ELSE> Stm )?
+ */
+Statement tryIfStm(SymbolTable symtab) :
+{
+  int[] lsync = { SEMICOLON };
+  int[] rsync = { INT, CHAR, BOOLEAN, IF, WHILE, RETURN, RBRACE};
+  Statement stm = null;
+}
+{
+  try
+  {
+    stm = parseIfStm(symtab)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return stm;
+  }
+}
+
+/**
+ * Reconoce una instrucción "if".
+ *
+ * IfStm ::= <IF> <LPAREN> Expr <RPAREN> Stm  ( <ELSE> Stm )?
+ */
+Statement parseIfStm(SymbolTable symtab) :
+{
+  Token tk;
+  Expression cond;
+  Statement thenStm;
+  Statement elseStm = null;
+}
+{
+  <IF>
+  tk = <LPAREN>
+  cond = tryExpr(symtab)
+  <RPAREN>
+  thenStm = tryStatement(symtab)
+  (
+    LOOKAHEAD( 1 )
+    <ELSE>
+    elseStm = tryStatement(symtab)
+  )?
+  {
+    return actionIfStatement(tk,cond,thenStm,elseStm);
+  }
+}
+
+/**
+ * Reconoce una instrucción "while".
+ *
+ * WhileStm ::= <WHILE> <LPAREN> Expr <RPAREN> Stm
+ */
+Statement tryWhileStm(SymbolTable symtab) :
+{
+  int[] lsync = { SEMICOLON };
+  int[] rsync = { INT, CHAR, BOOLEAN, IF, WHILE, RETURN, RBRACE};
+  Statement stm = null;
+}
+{
+  try
+  {
+    stm = parseWhileStm(symtab)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return stm;
+  }
+}
+
+/**
+ * Reconoce una instrucción "while".
+ *
+ * WhileStm ::= <WHILE> <LPAREN> Expr <RPAREN> Stm
+ */
+Statement parseWhileStm(SymbolTable symtab) :
+{
+  Token tk;
+  Expression cond;
+  Statement body;
+}
+{
+  <WHILE>
+  tk = <LPAREN>
+  cond = tryExpr(symtab)
+  <RPAREN>
+  body = tryStatement(symtab)
+  {
+    return actionWhileStatement(tk,cond,body);
+  }
+}
+
+/**
+ * Reconoce una instrucción "return".
+ *
+ * ReturnStm ::= <RETURN> ( Expr )? <SEMICOLON>
+ */
+Statement tryReturnStm(SymbolTable symtab) :
+{
+  int[] lsync = { SEMICOLON };
+  int[] rsync = { INT, CHAR, BOOLEAN, IF, WHILE, RETURN, RBRACE};
+  Statement stm = null;
+}
+{
+  try
+  {
+    stm = parseReturnStm(symtab)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return stm;
+  }
+}
+
+/**
+ * Reconoce una instrucción "return".
+ *
+ * ReturnStm ::= <RETURN> ( Expr )? <SEMICOLON>
+ */
+Statement parseReturnStm(SymbolTable symtab) :
+{
+  Token tk;
+  Expression exp = null;
+}
+{
+  tk = <RETURN>
+  ( exp = tryExpr(symtab) )?
+  <SEMICOLON>
+  {
+    return actionReturnStatement(tk,exp,symtab);
+  }
+}
+
+/**
+ * Reconoce una instrucción vacía.
+ *
+ * NoStm ::= <SEMICOLON>
+ */
+Statement tryNoStm(SymbolTable symtab) :
+{
+  int[] lsync = { SEMICOLON };
+  int[] rsync = { INT, CHAR, BOOLEAN, IF, WHILE, RETURN, RBRACE};
+  Statement stm = null;
+}
+{
+  try
+  {
+    stm = parseNoStm(symtab)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return stm;
+  }
+}
+
+/**
+ * Reconoce una instrucción vacía.
+ *
+ * NoStm ::= <SEMICOLON>
+ */
+Statement parseNoStm(SymbolTable symtab) :
+{
+}
+{
+  <SEMICOLON>
+  {
+    return null;
+  }
+}
+
+/**
+ * Reconoce una instrucción que comienza por "id"
+ *
+ * IdStm ::= <ID> ( Assignement | MethodCall | <DOT>  <ID>  MethodCall )  <SEMICOLON>
+ */
+Statement tryIdStm(SymbolTable symtab) :
+{
+  int[] lsync = { SEMICOLON };
+  int[] rsync = { INT, CHAR, BOOLEAN, IF, WHILE, RETURN, RBRACE};
+  Statement stm = null;
+}
+{
+  try
+  {
+    stm = parseIdStm(symtab)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return stm;
+  }
+}
+
+/**
+ * Reconoce una instrucción que comienza por "id"
+ *
+ * IdStm ::= <ID> ( Assignement | MethodCall | <DOT>  <ID>  MethodCall )  <SEMICOLON>
+ */
+Statement parseIdStm(SymbolTable symtab) :
+{
+  Token tid1, tid2;
+  Expression exp;
+  CallParameters param;
+  Statement stm;
+}
+{
+  tid1 = <IDENTIFIER>
+  (
+    <ASSIGN> exp = tryExpr(symtab)
+    { stm = actionAssignStatement(tid1,exp,symtab); }
+  |
+    param = FunctionCall(symtab)
+    { stm = actionCallStatement(tid1,param,symtab); }
+  |
+    <DOT> tid2= <IDENTIFIER>  param=FunctionCall(symtab)
+    { stm = actionCallStatement(tid1,tid2,param,symtab); }
+  )
+  <SEMICOLON>
+  {
+    return stm;
+  }
+}
+
+/**
+ * Reconoce un bloque de instrucciones entre llaves.
+ *
+ * BlockStm ::= <LBRACE> ( Stm )* <RBRACE>
+ */
+Statement tryBlockStm(SymbolTable symtab) :
+{
+  int[] lsync = { SEMICOLON };
+  int[] rsync = { INT, CHAR, BOOLEAN, IF, WHILE, RETURN, RBRACE};
+  Statement stm = null;
+}
+{
+  try
+  {
+    stm = parseBlockStm(symtab)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return stm;
+  }
+}
+
+/**
+ * Reconoce un bloque de instrucciones entre llaves.
+ *
+ * BlockStm ::= <LBRACE> ( Stm )* <RBRACE>
+ */
+Statement parseBlockStm(SymbolTable symtab) :
+{
+  BlockStatement block = new BlockStatement();
+  Statement stm;
+}
+{
+  <LBRACE>
+  {
+    symtab.createScope();
+  }
+  (
+    stm = tryStatement(symtab)
+    { actionAddStatement(block,stm); }
+  )*
+  <RBRACE>
+  {
+    symtab.deleteScope();
+    return block;
+  }
+}
+
+/**************************************************************/
+/*       EL ANÁLISIS DE LAS EXPRESIONES COMIENZA AQUÍ         */
+/**************************************************************/
+
+/**
+ * Reconoce una expresión (considerando el operador OR como el de menor prioridad)
+ *
+ * Expr ::= AndExpr ( <OR> AndExpr )*
+ */
+Expression tryExpr(SymbolTable symtab) :
+{
+  int[] lsync = { };
+  int[] rsync = { SEMICOLON, COMMA, RPAREN };
+  Expression exp = null;
+}
+{
+  try
+  {
+    exp = parseExpr(symtab)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return exp;
+  }
+}
+
+/**
+ * Reconoce una expresión (considerando el operador OR como el de menor prioridad)
+ *
+ * Expr ::= AndExpr ( <OR> AndExpr )*
+ */
+Expression parseExpr(SymbolTable symtab) :
+{
+  Expression exp1, exp2;
+  Token tk;
+}
+{
+  exp1 = tryAndExpr(symtab)
+  (
+    tk = <OR>
+    exp2 = tryAndExpr(symtab)
+    { exp1 = actionOrExpression(tk, exp1,exp2); }
+  )*
+  {
+    return exp1;
+  }
+}
+
+/**
+ * Reconoce una expresión en el nivel de prioridad del operador AND
+ *
+ * AndExpr ::= RelExpr ( <AND> RelExpr )*
+ */
+Expression tryAndExpr(SymbolTable symtab) :
+{
+  int[] lsync = { };
+  int[] rsync = { SEMICOLON, COMMA, RPAREN, OR };
+  Expression exp = null;
+}
+{
+  try
+  {
+    exp = parseAndExpr(symtab)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return exp;
+  }
+}
+
+/**
+ * Reconoce una expresión en el nivel de prioridad del operador AND
+ *
+ * AndExpr ::= RelExpr ( <AND> RelExpr )*
+ */
+Expression parseAndExpr(SymbolTable symtab) :
+{
+  Expression exp1, exp2;
+  Token tk;
+}
+{
+  exp1 = tryRelExpr(symtab)
+  (
+    tk = <AND>
+    exp2 = tryRelExpr(symtab)
+    { exp1 = actionAndExpression(tk, exp1,exp2); }
+  )*
+  {
+    return exp1;
+  }
+}
+
+/**
+ * Reconoce una expresión en el nivel de prioridad de los comparadores
+ *
+ * RelExpr ::= SumExpr ( RelOp SumExpr )?
+ */
+Expression tryRelExpr(SymbolTable symtab) :
+{
+  int[] lsync = { };
+  int[] rsync = { SEMICOLON, COMMA, RPAREN, OR, AND };
+  Expression exp = null;
+}
+{
+  try
+  {
+    exp = parseRelExpr(symtab)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return exp;
+  }
+}
+
+/**
+ * Reconoce una expresión en el nivel de prioridad de los comparadores
+ *
+ * RelExpr ::= SumExpr ( RelOp SumExpr )?
+ */
+Expression parseRelExpr(SymbolTable symtab) :
+{
+  Expression exp1, exp2;
+  int op;
+  Token tk;
+}
+{
+  exp1 = trySumExpr(symtab)
+  (
+    { tk = getToken(1); }
+    op = RelOp()
+    exp2 = trySumExpr(symtab)
+    { exp1 = actionRelExpression(tk, op, exp1,exp2); }
+  )?
+  {
+    return exp1;
+  }
+}
+
+/**
+ * Reconoce un operador de relación
+ *
+ * RelOp ::= <EQ> | <NE> | <GT> | <GE> | <LT> | <LE>
+ */
+int RelOp() :
+{
+  int op;
+}
+{
+  (    <EQ> { op = BinaryExpression.EQ; } 
+  | <NE> { op = BinaryExpression.NEQ; } 
+  | <GT> { op = BinaryExpression.GT; } 
+  | <GE> { op = BinaryExpression.GE; } 
+  | <LT> { op = BinaryExpression.LT; } 
+  | <LE> { op = BinaryExpression.LE; }
+  )
+  {
+    return op;
+  }
+}
+
+/**
+ * Reconoce una expresión en el nivel de prioridad de la suma
+ * (una expresión aritmética)
+ *
+ * SumExpr ::= UnOp ProdExpr ( SumOp ProdExpr )*
+ */
+Expression trySumExpr(SymbolTable symtab) :
+{
+  int[] lsync = { };
+  int[] rsync = { SEMICOLON, COMMA, RPAREN, OR, AND, EQ, NE, GT, GE, LT, LE };
+  Expression exp = null;
+}
+{
+  try
+  {
+    exp = parseSumExpr(symtab)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return exp;
+  }
+}
+
+/**
+ * Reconoce una expresión en el nivel de prioridad de la suma
+ * (una expresión aritmética)
+ *
+ * SumExpr ::= UnOp ProdExpr ( SumOp ProdExpr )*
+ */
+Expression parseSumExpr(SymbolTable symtab) :
+{
+  Expression exp1, exp2;
+  int unop, op;
+  Token tk;
+}
+{
+  { tk = getToken(1); }
+  unop = UnOp()
+  exp1 = tryProdExpr(symtab)
+  { exp1 = actionUnaryExpression(tk, unop,exp1); } 
+  (
+    { tk = getToken(1); }
+    op = SumOp()
+    exp2 = tryProdExpr(symtab)
+    { exp1 = actionSumExpression(tk, op, exp1,exp2); }
+  )*
+  {
+    return exp1;
+  }
+}
+
+/**
+ * Reconoce un operador unario
+ *
+ * UnOp ::= ( <NOT> | <MINUS>  | <PLUS>  )?
+ */
+int UnOp() :
+{
+  int op = UnaryExpression.NONE;
+}
+{
+  (
+    <NOT> { op = UnaryExpression.NOT; }
+  | <MINUS> { op = UnaryExpression.MINUS; }
+  | <PLUS> {  op = UnaryExpression.PLUS; }
+  )?
+  {
+    return op;
+  }
+}
+
+/**
+ * Reconoce un operador del nivel de prioridad de la suma
+ *
+ * SumOp ::= <MINUS> | <PLUS>
+ */
+int SumOp() :
+{
+  int op;
+}
+{
+  (
+    <MINUS> {  op = BinaryExpression.MINUS; }
+  | <PLUS> { op = BinaryExpression.PLUS; }
+  )
+  {
+    return op;
+  }
+}	
+
+/**
+ * Reconoce una expresión en el nivel de prioridad del producto
+ * (un término aritmético)
+ *
+ * ProdExpr ::= Factor ( MultOp Factor )*
+ */
+Expression tryProdExpr(SymbolTable symtab) :
+{
+  int[] lsync = { };
+  int[] rsync = { SEMICOLON, COMMA, RPAREN, OR, AND, EQ, NE, GT, GE, LT, LE, PLUS, MINUS };
+  Expression exp = null;
+}
+{
+  try
+  {
+    exp = parseProdExpr(symtab)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return exp;
+  }
+}
+
+/**
+ * Reconoce una expresión en el nivel de prioridad del producto
+ * (un término aritmético)
+ *
+ * ProdExpr ::= Factor ( MultOp Factor )*
+ */
+Expression parseProdExpr(SymbolTable symtab) :
+{
+  Expression exp1, exp2;
+  int op;
+  Token tk;
+}
+{
+  exp1 = tryFactor(symtab)
+  (
+    { tk = getToken(1); }
+    op = MultOp()
+    exp2 = tryFactor(symtab)
+    { exp1 = actionProdExpression(tk, op, exp1,exp2); }
+  )*
+  {
+    return exp1;
+  }
+}
+
+/**
+ * Reconoce un operador del nivel de prioridad del producto
+ *
+ * MultOp ::= <PROD> | <DIV> | <MOD>
+ */
+int MultOp() :
+{
+  int op;
+}
+{
+  (
+    <PROD> {  op = BinaryExpression.PROD; }
+  | <DIV> { op = BinaryExpression.DIV; }
+  | <MOD> { op = BinaryExpression.MOD; }
+  )
+  {
+    return op;
+  }
+}	
+
+/**
+ * Reconoce un factor
+ *
+ * Factor ::= Literal | Reference | <LPAREN> Expr <RPAREN>
+ */
+Expression tryFactor(SymbolTable symtab) :
+{
+  int[] lsync = { };
+  int[] rsync = { SEMICOLON, COMMA, RPAREN, OR, AND, EQ, NE, GT, GE, LT, LE, PLUS, MINUS, PROD, DIV, MOD };
+  Expression exp = null;
+}
+{
+  try
+  {
+    exp = parseFactor(symtab)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return exp;
+  }
+}
+
+/**
+ * Reconoce un factor
+ *
+ * Factor ::= Literal | Reference | <LPAREN> Expr <RPAREN>
+ */
+Expression parseFactor(SymbolTable symtab) :
+{
+  Expression exp;
+}
+{
+  (
+    exp = Literal()
+  | exp = Reference(symtab)
+  |	<LPAREN>  exp = tryExpr(symtab)  <RPAREN>
+  )
+  {
+    return exp;
+  }
+}
+
+/**
+ * Reconoce un literal
+ *
+ * Literal ::= <INTEGER_LITERAL> | <CHAR_LITERAL>  | <TRUE>  | <FALSE>
+ */
+Expression Literal() :
+{
+  Expression exp;
+  Token tk;
+}
+{
+  (
+    tk = <INTEGER_LITERAL> { exp = actionIntegerLiteral(tk); }
+  | tk = <CHAR_LITERAL>    { exp = new CharLiteralExpression(tk.image); }
+  |	<TRUE>                 { exp = new BooleanLiteralExpression(true); }
+  |	<FALSE>                { exp = new BooleanLiteralExpression(false); }
+  )
+  {
+    return exp;
+  }              
+}
+
+/**
+ * Reconoce una referencia a una variable o a una función
+ *
+ * Reference ::= <IDENTIFIER> ( FunctionCall | <DOT> <IDENTIFIER> FunctionCall )?
+ */
+Expression Reference(SymbolTable symtab) :
+{
+  Token tid1, tid2 = null;
+  CallParameters params = null;
+}
+{
+  tid1 = <IDENTIFIER>
+  (
+    params = FunctionCall(symtab)
+  | <DOT> tid2 = <IDENTIFIER>  params = FunctionCall(symtab)
+  )?
+  {
+    return actionReferenceExpression(tid1,tid2,params,symtab);
+  }
+}
+
+/**
+ * Reconoce los parámetros de llamada a una función
+ *
+ * FunctionCall ::= <LPAREN> ( Expr ( <COMMA> Expr )* )? <RPAREN>
+ */
+CallParameters FunctionCall(SymbolTable symtab) :
+{
+  CallParameters param = new CallParameters(); 
+  Expression exp;
+}
+{
+  <LPAREN>
+  (
+    exp = tryExpr(symtab)
+    { param.addParameter(exp); } 
+    (
+      <COMMA>
+      exp = tryExpr(symtab)
+      { param.addParameter(exp); }
+    )*
+  )?
+  <RPAREN>
+  {
+    return param;
+  }
+}
+
+
+JAVACODE
+void skipTo(int[] left, int[] right)
+{
+  Token prev = getToken(0);
+  Token next = getToken(1);
+  boolean flag = false;
+  if(prev.kind == EOF || next.kind == EOF) flag = true;
+  for(int i=0; i<left.length; i++) if(prev.kind == left[i]) flag = true;
+  for(int i=0; i<right.length; i++) if(next.kind == right[i]) flag = true;
+	
+  while(!flag)
+  {
+    getNextToken();
+    prev = getToken(0);
+    next = getToken(1);
+    if(prev.kind == EOF || next.kind == EOF) flag = true;
+    for(int i=0; i<left.length; i++) if(prev.kind == left[i]) flag = true;
+    for(int i=0; i<right.length; i++) if(next.kind == right[i]) flag = true;
+  }
+}

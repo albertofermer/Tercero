@@ -1,0 +1,2 @@
+[File Main.tinto] 1 errors found:
+File Main.tinto doesn't exist.

@@ -1,0 +1,151 @@
+program dosrecursos;
+
+const
+	np1=3;
+	np2=3;
+	np12=3;
+	TODOS=9;
+var
+	peticion: array[1..TODOS] of channel of char;	
+	entraR1: array[1..np1] of channel of integer;
+	entraR2: array[1..np2] of channel of integer;
+	entraR121: array[1..np12] of channel of integer;
+	entraR122: array[1..np12] of channel of integer;
+	saleR2: array[1..np2] of channel of integer;
+	saleR1: array[1..np1] of channel of integer;
+	saleR121: channel of integer; {debe ser array, pero satura el pascalFC}
+	saleR122: channel of integer;{debe ser array, pero satura el pascalFC}
+
+
+process Controlador;
+var
+	id, c0, c1, c2, c3, c4, c5, c6:integer;
+	libre1, libre2:boolean;
+	tipopeticion: char;
+	cola1, cola2, cola121, cola122:integer;
+
+begin
+	libre1:=true;
+	libre2:=true;
+	cola1:=0;
+	cola2:=0;
+	cola121:=0;
+	cola122:=0;
+	repeat
+		select
+			for c0:=1 to TODOS replicate
+				peticion[c0] ? tipopeticion;
+				if tipopeticion='a' then cola1:=cola1+1; 
+				if tipopeticion='b' then cola2:=cola2+1;
+				if tipopeticion='c' then cola121:=cola121+1;
+				if tipopeticion='d' then cola122:=cola122+1;
+		or
+			for c1:=1 to np1 replicate
+				when (libre1=true) and (cola1 > cola122) =>
+				entraR1[c1] ? id;
+				cola1:=cola1-1;
+				libre1:=false;
+				writeln('-->Proceso tipo P1 ',id,' usando R1');
+		or
+			for c2:=1 to np2 replicate
+				when (libre2=true) and (cola122=0) =>
+				entraR2[c2] ? id;
+				cola2:=cola2-1;
+				libre2:=false;
+				writeln('----->Proceso tipo P2 ',id,' usando R2');
+		or
+			for c3:=1 to np12 replicate
+				when (libre1=true) and (cola121 >= cola1) =>
+				entraR121[c3] ? id;
+				cola121:=cola121-1;
+				libre1:=false;
+				writeln('----------->Proceso tipo P12 ',id,' usando R1');
+		or
+			for c4:=1 to np12 replicate
+				when libre2=true =>
+				entraR122[c4] ? id;
+				cola122:=cola122-1;
+				libre2:=false;
+				writeln('----------->Proceso tipo P12 ',id,' usando R2');
+		or				
+			for c5:=1 to np1 replicate
+				saleR1[c5] ? id;
+				libre1:=true;				
+				writeln('<--Proceso tipo P1 ',id,' FIN R1');
+		or				
+			for c6:=1 to np2 replicate
+				saleR2[c6] ? id;
+				libre2:=true;				
+				writeln('<----- Proceso tipo P2 ',id,' FIN R2');	
+		or				
+				saleR121 ? id;
+				libre1:=true;				
+				writeln('<-----------Proceso tipo P12 ',id,' FIN R1');
+		or				
+				saleR122 ? id;
+				libre2:=true;				
+				writeln('<--------- Proceso tipo P12 ',id,' FIN R2');	
+		or
+			terminate
+		end				
+	forever
+end;
+
+process type P1(id:integer);
+var
+i: integer;
+
+begin
+	for i:=1 to 3 do	
+	begin
+		peticion[id] ! 'a';
+		entraR1[id] ! id;
+		sleep(2);
+		saleR1[id] ! id;
+	end
+end;
+
+process type P2(id:integer);
+var
+i: integer;
+begin
+	for i:=1 to 3 do
+	begin
+		peticion[id+np1] ! 'b';
+		entraR2[id] ! id;
+		sleep(2);
+		saleR2[id] ! id;
+	end
+end;
+
+process type P12(id:integer);
+var
+i: integer;
+begin
+	for i:=1 to 3 do
+	begin
+		peticion[id+np1+np2] ! 'c';
+		entraR121[id] ! id;
+		peticion[id+np1+np2] ! 'd';
+		entraR122[id] ! id;
+		sleep(2);
+		saleR121 ! id;
+		saleR122 ! id;
+	end
+end;
+
+var
+   i,j,k: integer;
+   PR1: array[1..np1] of P1;
+   PR2: array[1..np2] of P2;
+   PR12: array[1..nP12] of P12;
+
+begin
+  cobegin
+	Controlador;
+    for i := 1 to np1 do PR1[i](i);
+    for j := 1 to np2 do PR2[j](j);
+    for k := 1 to np12 do PR12[k](k);
+  coend
+end.
+

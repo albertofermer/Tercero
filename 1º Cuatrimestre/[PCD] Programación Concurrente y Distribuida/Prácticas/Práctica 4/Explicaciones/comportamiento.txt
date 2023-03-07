@@ -1,0 +1,10 @@
+Pila: Apila(dato)
+	int intentos=0;
+	while(pilallena) 
+		wait();
+		intentos++;
+		if intentos==3 :exception;
+	{apilar};
+	notifyAll();
+	
+

@@ -1,0 +1,51 @@
+; %%%%%%%%%%%%%%%
+; Main_Main
+; %%%%%%%%%%%%%%%
+Main_Main:
+	assign tmp_0, 0x5                                ; tmp_0 <- 5
+	assign local_0, tmp_0                            ; a <- tmp_0
+	precall 0x4
+	param local_0, 0x0                               ; param[0] <- a
+	call tmp_1, Main_factorial_0                     ; tmp_1 <- Main_factorial_0()
+	assign local_1, tmp_1                            ; f <- tmp_1
+	precall 0x4
+	param local_0, 0x0                               ; param[0] <- a
+	call tmp_2, Console_print_0                      ; tmp_2 <- Console_print_0()
+	precall 0x4
+	assign tmp_3, 0x21                               ; tmp_3 <- 33
+	param tmp_3, 0x0                                 ; param[0] <- tmp_3
+	call tmp_4, Console_print_1                      ; tmp_4 <- Console_print_1()
+	precall 0x4
+	assign tmp_5, 0x3d                               ; tmp_5 <- 61
+	param tmp_5, 0x0                                 ; param[0] <- tmp_5
+	call tmp_6, Console_print_1                      ; tmp_6 <- Console_print_1()
+	precall 0x4
+	assign tmp_7, 0x20                               ; tmp_7 <- 32
+	param tmp_7, 0x0                                 ; param[0] <- tmp_7
+	call tmp_8, Console_print_1                      ; tmp_8 <- Console_print_1()
+	precall 0x4
+	param local_1, 0x0                               ; param[0] <- f
+	call tmp_9, Console_print_0                      ; tmp_9 <- Console_print_0()
+;
+;
+; %%%%%%%%%%%%%%%
+; Main_factorial_0
+; %%%%%%%%%%%%%%%
+Main_factorial_0:
+	assign tmp_0, 0x1                                ; tmp_0 <- 1
+	jmpeq Main_factorial_0_1, arg_0, tmp_0           ; if(a == tmp_0) jump Main_factorial_0_1
+	jump Main_factorial_0_2                          ; jump Main_factorial_0_2
+Main_factorial_0_1:
+	assign tmp_1, 0x1                                ; tmp_1 <- 1
+	return tmp_1                                     ; return tmp_1
+Main_factorial_0_2:
+	precall 0x4
+	assign tmp_3, 0x1                                ; tmp_3 <- 1
+	sub tmp_2, arg_0, tmp_3                          ; tmp_2 <- a - tmp_3
+	param tmp_2, 0x0                                 ; param[0] <- tmp_2
+	call tmp_4, Main_factorial_0                     ; tmp_4 <- Main_factorial_0()
+	assign local_0, tmp_4                            ; c <- tmp_4
+	mul tmp_5, arg_0, local_0                        ; tmp_5 <- a * c
+	return tmp_5                                     ; return tmp_5
+;
+;

@@ -1,0 +1,75 @@
+
+import Console;
+
+/**
+ * Aplicación para probar los operadores
+ * de bit.
+ */
+library Main {
+
+  /**
+   * Punto de entrada de la aplicación
+   */
+  public void Main() 
+  {
+    int a = ~42;
+    int b = 15;
+    
+    Console.print('T'); Console.print('I'); Console.print('L'); Console.print('D'); Console.print('E'); Console.print('('); Console.print('~'); Console.print(~a);Console.print(')');
+    Console.print(':'); Console.print(' ');
+    
+    imprimir(a);
+    
+    a = 42;
+    
+    int c = a&b;
+    Console.print('B'); Console.print('I'); Console.print('T'); Console.print('_'); Console.print('A');
+    Console.print('N'); Console.print('D'); Console.print('('); Console.print(a); Console.print('&'); 
+    Console.print(b);Console.print(')'); Console.print(':'); Console.print(' ');
+    
+    imprimir(c);
+    
+    c = a|b;
+    Console.print('B'); Console.print('I'); Console.print('T'); Console.print('_'); Console.print('O');
+    Console.print('R'); Console.print('('); Console.print(a); Console.print('|');Console.print(b);
+    Console.print(')'); Console.print(':'); Console.print(' ');  
+    
+    imprimir(c);
+    
+    c = a^b;
+        Console.print('B'); Console.print('I'); Console.print('T'); Console.print('_'); Console.print('X');
+    Console.print('O'); Console.print('R');Console.print('('); Console.print(a); Console.print('^');Console.print(b);Console.print(')'); Console.print(':'); Console.print(' ');
+    
+    imprimir(c);
+    
+    c = a<<5;
+    Console.print('L'); Console.print('_'); Console.print('S'); Console.print('H'); Console.print('I');
+    Console.print('F'); Console.print('T'); Console.print('('); Console.print(a); Console.print('<'); Console.print('<'); Console.print('5');Console.print(')'); Console.print(':'); Console.print(' ');
+    
+    imprimir(c);
+    
+    a = -42;
+    
+    c = a>>3;
+    Console.print('R'); Console.print('S'); Console.print('_'); Console.print('S'); Console.print('H'); Console.print('I');
+    Console.print('F'); Console.print('T'); Console.print('('); Console.print(a); Console.print('>'); Console.print('>'); Console.print('3');Console.print(')'); Console.print(':'); Console.print(' ');
+    
+    imprimir(c);
+    
+    c = a>>>3;
+    Console.print('R'); Console.print('U'); Console.print('_'); Console.print('S'); Console.print('H'); Console.print('I');
+    Console.print('F'); Console.print('T'); Console.print('('); Console.print(a); Console.print('>'); Console.print('>'); Console.print('>'); Console.print('3');Console.print(')'); Console.print(':'); Console.print(' ');
+    imprimir(c);
+
+  }
+
+
+  /**
+   * Imprime un número entero en la consola
+   */
+  private void imprimir(int i) 
+  {
+    Console.print(i);
+    Console.print('\n');
+  }
+}

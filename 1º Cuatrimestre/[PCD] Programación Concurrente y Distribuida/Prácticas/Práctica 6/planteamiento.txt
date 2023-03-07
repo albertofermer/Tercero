@@ -1,0 +1,56 @@
+RobotA{
+for(){
+	sleep();
+	cogehoja();
+		esperarMesaLibre();
+	ponerenmesa();
+		release(Semaforo G);
+}
+}
+
+RobotG{
+for()
+		esperarCuatroHojas();
+	grapa()
+		release(Semaforo A);
+	sleep()
+	ponerencinta()
+
+}
+
+esperarMesaLibre(){
+	adquire()
+}
+
+esperarCuatroHojas(){
+	adquire()
+}
+
+Semaforo G -> inicializado a 0
+Semaforo A -> Inicializado a NUMROBOTSA
+
+
+RobotA1			RobotA2			RobotG
+========================================================
+A1.wait			A2.wait			G1.wait
+						G2.wait
+cogerHoja		cogerHoja		graparHojas
+ponerHoja		ponerHoja		A1.signal
+						A2.signal
+G1.signal		G2.signal		ponerEnCinta
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

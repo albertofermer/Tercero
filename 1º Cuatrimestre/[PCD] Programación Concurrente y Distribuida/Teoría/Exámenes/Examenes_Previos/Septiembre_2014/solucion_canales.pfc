@@ -1,0 +1,108 @@
+
+program dosrecursos;
+
+const
+	npA=5;
+	npB=5;
+
+var
+	peticion: array[1..npA] of channel of synchronous;	
+	entraPA: array[1..npA] of channel of synchronous;
+	entraPB: array[1..npB] of channel of integer;
+	salePA: array[1..npA] of channel of synchronous;
+	salePB: array[1..npB] of channel of integer;
+
+
+process Controlador;
+var
+	id, c0, c1, c2, c3, c4, c5:integer;
+	libreR1:integer;
+	libreR2:boolean;
+	cola1:integer;
+
+begin
+	libreR1:=2;
+	libreR2:=true;
+	colaA:=0;
+
+	repeat
+		priselect
+			for c0:=1 to npA replicate
+				peticion[c0] ? any;
+				colaA:=colaA+1; 
+
+		or
+			for c1:=1 to npA replicate
+				when libre1=2 =>
+				entraPA[c1] ? any;
+				colaA:=colaA-1;
+				libre1:=0;
+				writeln('-->Proceso tipo PA ',id,' usando R1');
+		or
+			for c2:=1 to npB replicate
+				when libre2=true  =>
+				entraPB[c2] ! 2;
+				libre2:=false;
+				writeln('----->Proceso tipo PB ',id,' usando R2');
+		or
+			for c5:=1 to npB replicate
+				when libre1>0 and colaA=0  =>
+				entraPB[c5] ! 1;
+				libre1:=libre1-1;
+				writeln('----->Proceso tipo PB ',id,' usando R1');
+		or
+			for c3:=1 to npA replicate
+				salePA[c3] ? any;
+				libre1:=2;				
+				writeln('<--Proceso tipo PA ',id,' FIN R1');
+		or				
+			for c4:=1 to npB replicate
+				salePB[c4] ? cual;
+				if cual=2 then begin
+					libre2:=true;
+					writeln('<----- Proceso tipo PB ',id,' FIN R1');	
+				end
+				else begin
+					libre1=libre1-1;
+					writeln('<----- Proceso tipo PB ',id,' FIN R1');	
+				end
+		or
+			terminate
+		end				
+	forever
+end;
+
+
+
+
+process type PA(id:integer);
+begin
+	peticion[id] ! any;
+	entraPA[id] ! any;
+	sleep(2);
+	salePA ! any;
+end;
+
+process type PB(id:integer);
+var
+ cual: integer;
+begin
+	entraPB[id] ? cual;
+	sleep(2);
+	salePB[id] ! cual;
+end;
+
+
+var
+   i,j: integer;
+   PRA: array[1..npA] of PA;
+   PRB: array[1..npB] of PB;
+
+begin
+  cobegin
+	Controlador;
+    for i := 1 to npA do PRA[i](i);
+    for j := 1 to npB do PRB[j](j);
+  coend
+end.
+

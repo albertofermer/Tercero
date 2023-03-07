@@ -1,0 +1,52 @@
+=======================================================================
+	Realidad Virtual
+=======================================================================
+
+	Describir las etapas del proceso de renderizado (pipeline). 					✔️
+	Indicar qué etapas son programables.									✔️
+	Indicar qué funciones realiza cada etapa.									✔️
+	Especificar las entradas y las salidas de cada etapa.							✔️
+
+	Describir qué es un Vertex Buffer Object. Cómo crearlo y cómo configurarlo.			✔️
+	Describir qué es un Vertex Array Object. Cómo crearlo y cómo configurarlo.			✔️
+	Describir qué es un Frame Buffer Object. Cómo crearlo y cómo usarlo.				✔️
+	Describir qué es un Transform Feedback Object. Cómo crearlo y cómo usarlo.			✔️
+
+	Describir el modelo de iluminación de Phong.								✔️
+	Describir los tipos de luz que hay en él.									✔️
+	Cómo calcular el efecto que produce sobre los materiales.						✔️
+
+	Describir qué es una textura.											✔️
+	Especificar cuántos tipos de texturas existen.								✔️
+	Cómo se crean las texturas, cómo se asigna el contenido y cómo se aplican.			✔️
+	Cómo crear y asignar una textura 2D.									✔️❌
+	Cómo se obtiene el contenido de las texturas en el Fragment Shader.				✔️❌
+
+	Cómo funciona la generación automática de primitivas mediante Teselado.				✔️
+	Qué funciones realiza cada etapa del teselado.								✔️
+	Definir las entradas y salidas de cada etapa del teselado.						✔️
+	Cómo se configura el nivel de teselado.									✔️
+
+	Cómo crear y cómo usar un programa gráfico.	(Vertex Shader / Fragment Shader) 		✔️
+	Definir las entradas y salidas. 			(Vertex Shader / Fragment Shader) 		✔️
+	Incluir ejemplos. 		  			(Vertex Shader / Fragment Shader) 		✔️
+
+	Qué matrices hay que usar para transformar de coordenadas locales a coordenadas CLIP.	❌ 
+	Cómo configurar esas matrices.										❌
+	Describir dos tipos de proyecciones.									✔️
+
+	Qué es el Shader de Geometría.										✔️
+	Cuáles son las entradas y salidas predefinidas del Shader de Geometría.				✔️
+	Cuáles son las funciones predefinidas del Shader de Geometría.					✔️
+
+	Describir el algoritmo de Generación de Sombras ShadowMap.						✔️
+
+	Definir las primitivas geométricas de OpenGL.								✔️
+	Cómo diferenciar la cara frontal de la cara posterior.						✔️
+
+	Cuáles son los sistemas de coordendas para representar un modelo 3D.				✔️
+	Como se realizan las transformaciones.									✔️
+	Como se configuran las transformaciones.									✔️
+
+	
+

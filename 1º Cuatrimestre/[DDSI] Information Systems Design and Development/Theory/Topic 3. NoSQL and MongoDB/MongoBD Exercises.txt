@@ -1,0 +1,37 @@
+use ExercisesMongoDB
+db.products.insertMany([{item: "journal", qty:25, size:{h:14,w:21,uom:"cm"},status:"A"},
+			{item:"notebook",qty:50,size:{h:8.5,w:11,uom:"in"},status:"A"},
+			{item:"paper",qty:100,size:{h:8.5,w:11,uom:"in"},status: "D"}])
+
+db.products.insertMany([{item:"planner",qty:75,size:{h:22.5,w:30,uom:"cm"},status:"D"},
+			{item:"postcard",qty:45,size:{h:10,w:15.25,uom:"cm"},status:"A"}])
+
+2.1) db.products.find()
+2.2) db.products.find({item:"planner"})
+2.3) db.products.find({qty: {$gt: 60}})
+2.4) db.products.find({qty: {$gte: 75,$lte: 100}})
+2.5) db.products.find({"size.uom":"cm"})
+2.6) db.products.find({status:"D"},
+		      {item:1,status:1,_id:0})
+2.7) db.products.updateOne({item:"postcard"},{$set:{status:"C"}})
+2.8) db.products.updateOne({item:"notebook"},{$set:{"size.h":10,"size.w":14}})
+2.9) db.products.updateMany({"size.uom":"in"},{$set:{"size.uom":"cm"}})
+2.10) db.products.deleteMany({status:"A"})
+
+3) db.createCollection("products2")
+3) db.products2.insertMany([{ item: "journal", qty: 25, tags: ["blank", "red"], dim_cm: [ 14, 21 ] }, { item: "notebook", qty: 50, tags: ["red", "blank"], dim_cm: [ 14, 21 ] }, { item: "paper", qty: 100, tags: ["red", "blank", "plain"], dim_cm: [ 14, 21 ] }, { item: "planner", qty: 75, tags: ["blank", "red"], dim_cm: [ 22.85, 30 ] },
+{ item: "postcard", qty: 45, tags: ["blue"], dim_cm: [ 10, 15.25 ] }])
+
+4.1) db.products2.find({tags:["blank","red"]})
+4.2) db.products2.find({tags:{$all: ["blank","red"]}})
+4.3) db.products2.find({tags:{$all:["plain"]}})
+4.4) db.products2.find({dim_cm:{$lt:12}})
+4.5) db.products2.find({dim_cm:{$elemMatch: {$gt:15,$lt: 20}}})
+4.6) db.products2.find({dim_cm:{$gt:15,$lt: 18}})
+4.7) db.products2.find({"dim_cm.1":14})
+4.8) db.products2.find({"dim_cm.0":{$gt: 20}})
+4.9) db.products2.find({tags:{$size:1}})
+4.10) db.products2.updateOne({item:"journal"},{$push: {tags: "orange"}})
+4.11) db.products2.updateOne({item:"paper"},{$pull: {tags: "plain"}})
+4.12) db.products2.updateMany({qty:{$gt: 50}},{$inc: {qty: 10}})
+

@@ -1,0 +1,55 @@
+Cuando trabajen 2 roles distintos -> asignar dos subtareas que pueden hacerse paralelamente.
+
+Días verdes y rojos ETSI -> festivos.
+
+El coste total será 32400+4200 = 36800€
+
+Fecha máx de cancelación 21-12.
+
+
+línea base: con forme vayamos haciendo modificaciones al proyecto, comparar con la línea base.
+
+
+
+Planteamientos posibles:
+	1. No hacer nada -> representa pagar penalización y aumento del coste.
+	2. Con mis recursos, intentar ajustar el trabajo o aplicar horas extra.
+	3. Contratar nuevo personal.
+		3a. Se puede contratar gradualmente. Hacer un project por cada persona contratada.
+			→ Emplear recursos en la formación de cada trabajador nuevo. (5 días de preparación). 
+			  Se le sigue pagando aunque no esté trabajando.
+			→ Se contrata a alguien a partir del 26 de noviembre. (cuando estemos desviados).
+	4. Cancelar el proyecto. Analizar también la reputación de la empresa.
+
+Justificar cuál es la mejor decisión.
+
+Columnas:
+	→Trabajo
+	→Trabajo Previsto
+	→Trabajo real
+	→Trabajo restante
+-------------------------------------------------------------------------------------------------------------------------------
+Proyecto > Establecer linea base > Establecer linea base :  Establece el punto para comparar la ejecución real con lo previsto.
+	Se hace después de hacer el punto 1.
+
+Para decir que a una tarea le faltan aun X días para terminar.
+Tarea > %: Línea interior: Parte ejecutada de la tarea. Cambia el trabajo real.
+-------------------------------------------------------------------------------------------------------------------------------
+
+A dia 26 de nov. → desviación → la asume la tarea 2.3. → desviación de 4200 euros.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

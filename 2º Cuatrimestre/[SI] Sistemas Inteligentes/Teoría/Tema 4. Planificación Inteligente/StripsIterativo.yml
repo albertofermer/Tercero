@@ -1,0 +1,60 @@
+
+public List<Acciones> accionesPosibles = { ... }; //global
+public class Nodo{
+	
+	Stack pila;
+	Estado estado;
+	Plan solucion;
+	
+	public Nodo(Stack p, Estado e){
+		
+		pila = p;
+		estado = e;
+	}
+	
+}
+private List<Accion> StripsIterativo(Estado inicial, List<Meta> objetivos, List<Accion> accionesPosibles){
+	Stack pilaObjetivos = new Stack();
+	Nodo NodoInicial = new Nodo(pilaObjetivos,inicial);
+	List<Nodo> abiertos = new ArrayList<>();
+	List<Nodo> cerrados = new ArrayList<>();
+	
+	abiertos.add(NodoInicial);
+	
+	while(!abiertos.isEmpty()){
+		
+		Nodo actual = abiertos.remove(0);
+			if (actual.getPila().isEmpty()) return actual.getSolucion();
+			else {
+				actual.getSucesores();
+				...
+			}
+		
+		
+	}
+
+}
+
+public List<Accion> Strips(Estado inicial, List<Meta> objetivos, List<Accion> listaAcciones){
+	
+	List<Accion> plan = new ArrayList<>();
+	Stack pila = new Stack();
+	pila.addAll(objetivos);
+	Estado actual = new Estado();
+	plan = StripsIterativo(inicial,objetivos,listaAcciones);
+	// Comprueba si le ha afectado la anomalía de Sussmann.
+	// Cuando termina de aplicar las acciones, 
+	if (plan == null) return null;
+	else{
+		Estado estadoSussmann = inicial; 
+		for(Accion a : plan){
+			//Ejecutamos el plan para ver si se cumple la anomalía.
+			estadoSussmann = estadoSussmann.aplicar(a);
+		}
+		
+		if (estadoSussmann.getObjetivos().containsAll(objetivos)) return plan; // Contiene todos los objetivos
+		else return null; // Si el estado final no contiene todos los objetivos, 
+				  // se ha cumplido la anomalía de Sussmann y el plan no es correcto.
+	
+	
+	}

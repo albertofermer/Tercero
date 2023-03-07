@@ -1,0 +1,90 @@
+
+public List<Acciones> accionesPosibles = { ... }; //global
+
+private List<Accion> StripsRecursivo(Estado actual, Stack pila, List<Accion> accionesPosibles){
+
+    if(pila.isEmpty()) return new List<Accion>(); // Si la pila está vacía devuelve un plan vacío.
+    else{
+	    
+	    Apilable cima = pila.peak();
+	    switch(cima.tipo){
+		    case META:
+			if(cima.seCumple()){ra 
+				
+				pila.pop();
+				return StripsRecursivo(actual, pila, accionesPosibles);
+			
+			}else{
+				
+				List<Accion> listaAcciones = buscarAccion(accionesPosibles,cima);
+				if (!listaAcciones.isEmpty()){
+					for (Accion a : listaAcciones){
+						
+						Pila pCopia = pila.clone();
+						// Para que no modifique el estado actual en caso de que no llegue a una solución.
+						Estado actualCopia = actual; 
+						siguiente = StripsRecursivo(actualCopia, pCopia.push(a),accionesPosibles);
+						if(siguiente != null) return siguiente;
+
+					} 
+					
+				}
+				return null;
+			} 
+		    break;
+		    
+		    case ACCION:
+			Accion a = pila.pop();
+			if (hayCiclo()) return null;
+			else if (a.seCumple()){
+				
+				Eact = actual.aplicar(a); // Avanza al estado siguiente.
+				siguiente = StripsRecursivo(Eact, pila, accionesPosibles);
+				if (siguiente != null){ 
+					List<Accion> nuevoPlan = new ArrayList<Accion>();
+					nuevoPlan.add(a);
+					nuevoPlan.addAll(siguiente);
+					return nuevoPlan;
+				}
+				return null;
+			}else{
+				pila.push((Accion) a.precondiciones());
+				siguiente = StripsRecursivo();
+			}
+		    break;
+		    
+		    case MULTIOBJETIVO:
+			...
+		    break;
+		    
+		    default:
+		    
+	    }
+	    
+    }
+
+}
+
+public List<Accion> Strips(Estado inicial, List<Meta> objetivos, List<Accion> listaAcciones){
+	
+	List<Accion> plan = new ArrayList<>();
+	Stack pila = new Stack();
+	pila.addAll(objetivos);
+	Estado actual = new Estado();
+	plan = StripsRecursivo(inicial,pila,listaAcciones);
+	// Comprueba si le ha afectado la anomalía de Sussmann.
+	// Cuando termina de aplicar las acciones, 
+	if (plan == null) return null;
+	else{
+		Estado estadoSussmann = inicial; 
+		for(Accion a : plan){
+			//Ejecutamos el plan para ver si se cumple la anomalía.
+			estadoSussmann = estadoSussmann.aplicar(a);
+		}
+		
+		if (estadoSussmann.getObjetivos().containsAll(objetivos)) return plan; // Contiene todos los objetivos
+		else return null; // Si el estado final no contiene todos los objetivos, 
+				  // se ha cumplido la anomalía de Sussmann y el plan no es correcto.
+	
+	
+	}

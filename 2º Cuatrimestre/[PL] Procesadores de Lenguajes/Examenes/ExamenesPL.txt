@@ -1,0 +1,26 @@
+1. Obtener AFD asociado a una expresión regular. (Expresiones punteadas)
+2. Construir tabla SLR + traza
+3. ETDS que genere el AST asciado a expresiones.
+4. ETD con JavaCC.
+5. Calcular conjuntos Primero, Siguiente y Predicción de una gramática.
+6. ETDS que genere código intermedio.
+7. Construir autómata reconocedor de prefijos variables + tabla SLR.
+8. Hacer modificaciones a una gramática para verificar que cumple las condiciones LL(1).
+
+
+-----------
+  Teoría
+-----------
+
+	- Estructura del registro de activación de una función.
+	- Proceso de llamada a una función.
+	- Proceso de retorno de una función.
+	- ¿En qué consiste la memoria de pila?
+	- Función de verificación semántica en la tabla de símbolos.
+	- Técnicas de tratamiento de gramáticas no LL(1) en JavaCC. (Diferentes formas de modificar el lookahead).
+
+
+
+
+
+

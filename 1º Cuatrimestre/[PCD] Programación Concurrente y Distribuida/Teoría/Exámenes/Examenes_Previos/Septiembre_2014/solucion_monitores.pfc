@@ -1,0 +1,108 @@
+program dosdos;
+
+const
+	npa=10;
+	npb=10;
+
+{Definicion del monitor}
+monitor m;
+
+	export
+		entraPA, entraPB, salePA, salePB;
+	var
+		libreR1,colaA: integer;
+		libreR2: boolean;
+		esperaPA, esperaPB: condition;
+
+	procedure entraPA(id:integer);
+	begin
+		if (libreR1<2) then begin
+			colaA:=colaA+1;
+			delay(esperaPA);
+			colaA:=colaA-1;
+		end;
+		libreR1:=0;
+		writeln('-->Proceso tipo PA ',id,' usando R1');
+	end; 
+
+	procedure entraPB(id:integer, var tengo:integer);
+	begin
+		if not libreR2 and (libreR1=0 or colaA<>0) then delay(esperaPB);
+		if (libreR2) then begin
+			libreR2=false;
+			tengo=2;
+			writeln('------->Proceso tipo PB ',id,' usando R2');	
+		end
+		else begin 
+			libreR1:=libreR1-1;
+			tengo=1;
+			writeln('------->Proceso tipo PB ',id,' usando R1');	
+		end;
+	end; 
+
+	procedure salePA(id:integer);
+	begin
+		writeln('<--Proceso tipo PA ',id,' FIN ');
+		libreR1:=2;
+		if (colaA > 0) then resume(esperaPA)
+		else begin
+				resume (esperaPB);
+				resume (esperaPB);
+		end
+	end; 
+
+	procedure salePB(id:integer, tengo:integer);
+	begin
+		writeln('<--Proceso tipo PB ',id,' FIN ');
+		if tengo=2 then	
+			libreR2:=true;
+			resume(esperaB);
+		end
+		else begin
+			libreR1=libreR1+1;
+			if colaA=0 then resume(esperaB)
+			else if libreR2=2 then resume(esperaA);
+		end
+	end; 
+
+	begin 
+		libreR1:=2;
+		libreR2:=true;
+		colaA:=0;
+	end; 
+(* Fin del monitor *)
+
+
+process type PA(id:integer);
+begin
+	begin
+		m.entraPA(id); 
+		sleep(2); //ACCESO S.C
+		m.salePA(id);
+	end
+end;
+
+process type PB(id:integer);
+var
+	tengo:integer;
+begin
+	begin
+		m.entraPB(id, tengo);
+		sleep(3); //ACCESO S.C
+		m.salePB(id, tengo);
+	end
+end;
+
+
+var
+   i,j: integer;
+   PRA: array[1..np1] of P1;
+   PRB: array[1..np2] of P2;
+
+begin
+  cobegin
+    for i := 1 to npa do PRA[i](i);
+    for j := 1 to npb do PRB[j](j);
+  coend
+end.
+

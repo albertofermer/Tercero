@@ -1,0 +1,5 @@
+addpath('Funciones')
+addpath('../1. Generación de Patrones de Reconocimiento/ImagenesPractica5/Test/')
+addpath('../1. Generación de Patrones de Reconocimiento/Funciones/')
+addpath('../2. Diseño y Aplicación de Estrategias de Clasificación/Funciones/')
+funcion_reconoce_formas('Test1.JPG')

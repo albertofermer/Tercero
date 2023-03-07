@@ -1,0 +1,63 @@
+program prodcon;
+
+{Definicion del monitor}
+monitor Buffer;
+	export
+		poner, sacar;
+	const
+		MAX = 5;
+	var
+		recurso: array[0..4] of char;
+		elementos: integer;
+		nolleno, novacio: condition;
+		cola, frente: integer;
+
+	procedure poner(ch: char);
+	begin
+		if elementos = MAX then delay(nolleno);
+		recurso[cola] := ch;
+		elementos := elementos + 1;
+		cola := (cola + 1) mod MAX;
+		resume(novacio)
+	end;
+
+	procedure sacar(var ch: char);
+	begin
+		if elementos = 0 then delay(novacio);
+		ch := recurso[frente];
+		elementos := elementos - 1;
+		frente := (frente + 1) mod MAX;
+		resume(nolleno)
+	end;
+
+	begin
+		elementos := 0;
+		frente := 0;
+		cola := 0
+	end; 
+{Fin del monitor}
+
+process productor; {PRODUCTOR}
+var
+	local: char;
+begin
+	for local := 'a' to 'z' do Buffer.poner(local);
+end;
+
+process consumidor; {CONSUMIDOR}
+var
+	ch: char;
+begin
+	repeat
+		Buffer.sacar(ch);
+		write(ch,' ')
+	until ch = 'z';
+	writeln
+end;
+
+begin {MAIN}
+	cobegin
+		productor;
+		consumidor
+	coend
+end.

@@ -1,0 +1,2 @@
+[File Main.tinto] 1 error found:
+java.io.FileNotFoundException: C:\Users\afmhu\OneDrive - UNIVERSIDAD DE HUELVA\3º Curso\2º Cuatrimestre\[PL] Procesadores de Lenguajes\Prácticas\Práctica 6. Tratamiento de Errores\PL - Práctica06\Main.tinto (El sistema no puede encontrar el archivo especificado)

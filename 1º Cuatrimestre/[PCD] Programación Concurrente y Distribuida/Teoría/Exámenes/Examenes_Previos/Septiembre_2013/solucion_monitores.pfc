@@ -1,0 +1,142 @@
+program dosrecursos;
+
+const
+	np1=3;
+	np2=3;
+	np3=3;
+
+{Definicion del monitor}
+monitor m;
+
+	export
+		entraP1, entraP2, entraP3, saleP1, saleP2, saleP3;
+	var
+		libre: integer;
+		espera1, espera2, espera3: condition;
+		cola1, cola2, cola3: integer;
+
+	procedure entraP1(id:integer);
+	begin
+		if (libre=0) or (cola3 > 0) then 
+		begin
+			cola1:=cola1+1;
+			delay(espera1);
+			cola1:=cola1-1;
+		end;
+		libre:=libre-1;
+		writeln('-->Proceso tipo P1 ',id,' usando Registro');
+	end; 
+
+	procedure entraP2(id:integer);
+	begin
+		if (libre=0) or (cola3 > 0) then 
+		begin
+			cola2:=cola2+1;
+			delay(espera2);
+			cola2:=cola2-1;
+		end;
+		libre:=libre-1;
+		writeln('------->Proceso tipo P2 ',id,' usando Registro');	
+	end; 
+
+	procedure entraP3(id:integer);
+	begin
+		if  libre<2 then 
+		begin
+			cola3:=cola3+1;
+			delay(espera3);
+			cola3:=cola3-1;
+		end;
+		libre:=0;
+		writeln('-------------->Proceso tipo P3 ',id,' usando Registro');
+	end; 
+
+	procedure saleP1(id:integer);
+	begin
+		writeln('<--Proceso tipo P1 ',id,' FIN ');
+		libre:=libre+1;
+		if (cola3 > 0) and (libre=2) then resume(espera3)
+		else if cola2 > 0 then resume (espera2)
+		else resume(espera1);
+		
+	end; 
+
+	procedure saleP2(id:integer);
+	begin
+		writeln('<--Proceso tipo P2 ',id,' FIN ');
+		libre:=libre+1;
+		if (cola3 > 0) and (libre=2) then resume(espera3)
+		else if cola2 > 0 then resume (espera2)
+		else resume(espera1);
+	end; 
+
+	procedure saleP3(id:integer);
+	begin
+		writeln('<--Proceso tipo P3 ',id,' FIN ');
+		libre:=libre+2;
+		if cola3 > 0 then resume(espera3)
+		else if cola2 > 0 then resume (espera2)
+		else resume(espera1);
+	end; 
+
+	begin 
+		libre:=2;
+		cola1:=0;
+		cola2:=0;
+		cola3:=0;
+	end; 
+(* Fin del monitor *)
+
+
+process type P1(id:integer);
+var
+i: integer;
+
+begin
+	for i:=1 to 3 do	
+	begin
+		m.entraP1(id);
+		sleep(2);
+		m.saleP1(id);
+	end
+end;
+
+process type P2(id:integer);
+var
+i: integer;
+begin
+	for i:=1 to 3 do
+	begin
+		m.entraP2(id);
+		sleep(3);
+		m.saleP2(id);
+	end
+end;
+
+process type P3(id:integer);
+var
+i: integer;
+begin
+	for i:=1 to 3 do
+	begin
+		m.entraP3(id);
+		sleep(4);
+		m.saleP3(id);
+	end
+end;
+
+var
+   i,j,k: integer;
+   PR1: array[1..np1] of P1;
+   PR2: array[1..np2] of P2;
+   PR3: array[1..np3] of P3;
+
+begin
+  cobegin
+    for i := 1 to np1 do PR1[i](i);
+    for j := 1 to np2 do PR2[j](j);
+    for k := 1 to np3 do PR3[k](k);
+
+  coend
+end.
+

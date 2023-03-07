@@ -1,0 +1,53 @@
+	Comprar
+		Tienda t;
+		run{
+		t.EntraComprar();
+		compra()
+		t.SaleComprar();
+}
+
+	Reparar
+		Tienda t;
+		run{
+		t.EntraReparar();
+		compra()
+		t.SaleReparar();
+}
+
+	Tienda
+		int personasEsperando;
+	  sync char EntraComprar(){
+		personasEsperando++;
+		while(!vendedorLibre ?? ){ // Falta la condición de y/o si hay 2 esperando
+			wait();
+		}
+		personasEsperando--;
+		if(personasEsperando <= 2)
+			vendedorLibre = false;
+			quien = v;
+		else
+			tecnicoLibre = false;
+			quien = t;
+	return quien;
+}
+
+	  sync SaleComprar(char quien){
+		//Como se si es el vendedor o el técnico?
+		if quien == v 
+		vendedorLibre = true;
+		else if quien == t
+		tecnicolibre = true;
+		notifyAll(); //Cada uno que pregunte si puede volver a entrar
+}
+
+	EntraReparar(){
+		while(!tecnicolibre || personasEsperando > 2) wait();
+		tecnicolibre = false;
+
+}
+
+	  sync saleReparar(){
+		
+		tecnicoLibre = true;
+		notifyAll();//Cada uno que pregunte si puede volver a entrar
+}

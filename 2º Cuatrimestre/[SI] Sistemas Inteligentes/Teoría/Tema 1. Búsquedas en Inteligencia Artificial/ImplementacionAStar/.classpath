@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="src" path="src/Aplicación"/>
+	<classpathentry kind="src" path="src/Controlador"/>
+	<classpathentry kind="src" path="src/Modelo"/>
+	<classpathentry kind="src" path="src/Vista"/>
+	<classpathentry kind="lib" path="dist/ImplementacionAStar.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>

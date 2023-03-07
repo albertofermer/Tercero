@@ -1,0 +1,907 @@
+options {
+  STATIC=false;
+}
+PARSER_BEGIN(TintoHeaderParser)
+//------------------------------------------------------------------//
+//                        COPYRIGHT NOTICE                          //
+//------------------------------------------------------------------//
+// Copyright (c) 2017, Francisco José Moreno Velo                   //
+// All rights reserved.                                             //
+//                                                                  //
+// Redistribution and use in source and binary forms, with or       //
+// without modification, are permitted provided that the following  //
+// conditions are met:                                              //
+//                                                                  //
+// * Redistributions of source code must retain the above copyright //
+//   notice, this list of conditions and the following disclaimer.  // 
+//                                                                  //
+// * Redistributions in binary form must reproduce the above        // 
+//   copyright notice, this list of conditions and the following    // 
+//   disclaimer in the documentation and/or other materials         // 
+//   provided with the distribution.                                //
+//                                                                  //
+// * Neither the name of the University of Huelva nor the names of  //
+//   its contributors may be used to endorse or promote products    //
+//   derived from this software without specific prior written      // 
+//   permission.                                                    //
+//                                                                  //
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND           // 
+// CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,      // 
+// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF         // 
+// MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE         // 
+// DISCLAIMED. IN NO EVENT SHALL THE COPRIGHT OWNER OR CONTRIBUTORS //
+// BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,         // 
+// EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED  //
+// TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,    //
+// DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND   // 
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT          //
+// LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING   //
+// IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF   //
+// THE POSSIBILITY OF SUCH DAMAGE.                                  //
+//------------------------------------------------------------------//
+
+//------------------------------------------------------------------//
+//                      Universidad de Huelva                       //
+//          Departamento de Tecnologías de la Información           //
+//   Área de Ciencias de la Computación e Inteligencia Artificial   //
+//------------------------------------------------------------------//
+//                                                                  //
+//                  Compilador del lenguaje Tinto                   //
+//                                                                  //
+//------------------------------------------------------------------//
+
+
+package tinto.parser;
+
+import tinto.ast.*;
+import tinto.ast.struct.*;
+import java.util.Vector;
+
+public class TintoHeaderParser {
+
+	//----------------------------------------------------------------//
+	//                        Miembros privados                       //
+	//----------------------------------------------------------------//
+
+	/**
+	 * Contador de errores
+	 */
+	private int errorCount;
+	
+	/**
+	 * Mensaje de errores
+	 */
+	private String errorMsg;
+
+	//----------------------------------------------------------------//
+	//               Método que desarrolla el análisis                //
+	//----------------------------------------------------------------//
+	
+	/**
+	 * Método de análisis de un fichero
+	 */
+	public LibraryDeclaration parse(String libname) 
+	{
+		this.errorCount = 0;
+		this.errorMsg = "";
+		try
+		{
+			LibraryDeclaration library = tryCompilationUnit(libname);
+			return library;
+		}
+		catch(Throwable e)
+		{
+			catchError(e);
+			return null;
+		}
+	}
+
+
+	//----------------------------------------------------------------//
+	//       Métodos relacionados con el tratamiento de errores       //
+	//----------------------------------------------------------------//
+
+	/**
+	 * Obtiene el número de errores del análisis
+	 * @return
+	 */
+	public int getErrorCount()
+	{
+		return this.errorCount;
+	}
+	
+	/**
+	 * Obtiene el mensaje de error del análisis
+	 * @return
+	 */
+	public String getErrorMsg()
+	{
+		return this.errorMsg;
+	}
+	
+	/**
+	 * Almacena un error de análisis
+	 * @param ex
+	 */
+	private void catchError(Throwable ex)
+	{
+		this.errorCount++;
+		this.errorMsg += ex.toString();
+	}
+
+	//----------------------------------------------------------------//
+	//                Métodos de verificación semántica               //
+	//----------------------------------------------------------------//
+
+	/**
+	 * Verifica que el nombre de la biblioteca corresponde al nombre del
+	 * fichero ".tinto" 
+	 */
+	private boolean verifyLibraryName(Token tk, LibraryDeclaration library)
+	{
+		if(!tk.image.equals(library.getName()))
+		{
+			int errorcode = SemanticException.LIBRARY_NAME_EXCEPTION;
+			catchError(new SemanticException(errorcode,tk));
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Verifica que una cierta función no haya sido definido previamente
+	 * en la biblioteca
+	 */
+	private boolean verifyNonDuplicatedFunction(Token tk, Function function, LibraryDeclaration library)
+	{
+		int[] type = function.getArgumentTypes();
+		Function dup = library.getAnyFunction(tk.image,type);
+		if(dup != null)
+		{
+			int errorcode = SemanticException.DUPLICATE_FUNCTION_EXCEPTION;
+			catchError(new SemanticException(errorcode,tk));
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * Verifica que el nombre de un argumento no esté duplicado
+	 */
+	private boolean verifyNonDuplicatedArgument(Token tk, Vector<Variable> arguments)
+	{
+		if(arguments.contains(tk.image))
+		{	
+			int errorcode = SemanticException.DUPLICATE_ARGUMENT_EXCEPTION;
+			catchError(new SemanticException(errorcode,tk));
+			return false;
+		}
+		return true;
+	}
+
+	//----------------------------------------------------------------//
+	//                       Acciones semánticas                      //
+	//----------------------------------------------------------------//
+
+    /**
+     * Acción semántica que crea una función de una biblioteca
+     */
+	private void actionLibraryFunction(int acc, int type, Token tid, Vector<Variable> arguments, LibraryDeclaration library)
+	{
+	    Function function = new Function(acc, type, tid.image, library.getName());
+	    function.addArgumentList(arguments);
+		if(!verifyNonDuplicatedFunction(tid,function,library)) return;
+		library.addFunction(function);  
+	}
+
+	/**
+     * Acción semántica que añade un argumento a una lista de argumentos
+     */
+	private void actionAddArgument(int type, Token tk, Vector<Variable> arguments)
+	{
+	  if(!verifyNonDuplicatedArgument(tk,arguments)) return;
+	  arguments.add(new Variable(type, tk.image) );
+	}
+	
+}
+
+PARSER_END(TintoHeaderParser)
+
+
+/* WHITE SPACE */
+
+SKIP :
+{
+  " "
+| "\t"
+| "\n"
+| "\r"
+| "\f"
+}
+
+/* COMMENTS */
+
+SKIP :
+{
+  <SINGLE_LINE_COMMENT: "//" ( ~["\n","\r"] )* ("\n" | "\r" | "\r\n") >
+|
+  <MULTI_LINE_COMMENT: "/*" ( ~["*"] | ("*")+ ~["*","/"] )* ("*")+ "/" >
+}
+
+
+/* RESERVED WORDS */
+
+TOKEN :
+{
+  < BOOLEAN: "boolean" >
+| < CHAR: "char" >
+| < ELSE: "else" >
+| < FALSE: "false" >
+| < IF: "if" >
+| < IMPORT: "import" >
+| < INT: "int" >
+| < LIBRARY: "library" >
+| < NATIVE: "native" >
+| < PRIVATE: "private" >
+| < PUBLIC: "public" >
+| < RETURN: "return" >
+| < TRUE: "true" >
+| < VOID: "void" >
+| < WHILE: "while" >
+}
+
+/* LITERALS */
+
+TOKEN :
+{
+  < INTEGER_LITERAL: ( <DECIMAL_LITERAL> | <HEX_LITERAL> | <OCTAL_LITERAL> | <BINARY_LITERAL> ) >
+|
+  < #DECIMAL_LITERAL: ["1"-"9"] (["0"-"9"])* >
+|
+  < #HEX_LITERAL: "0" ["x","X"] (["0"-"9","a"-"f","A"-"F"])+ >
+|
+  < #OCTAL_LITERAL: "0" (["0"-"7"])* >
+|
+  < #BINARY_LITERAL: "0" ["b","B"] (["0"-"1"])+ >
+|
+  < CHAR_LITERAL:
+      "'"
+      (   (~["'","\\","\n","\r"])
+        | ("\\"
+            ( ["n","t","b","r","f","\\","'","\""]
+            | ["0"-"7"] ( ["0"-"7"] )?
+            | ["0"-"3"] ["0"-"7"] ["0"-"7"]
+            )
+          )
+      )
+      "'"
+  >
+}
+
+/* IDENTIFIERS */
+
+TOKEN :
+{
+  < IDENTIFIER: ["a"-"z","A"-"Z","_"] ( ["a"-"z","A"-"Z","0"-"9","_"] )* >
+}
+
+/* SEPARATORS */
+
+TOKEN :
+{
+  < LPAREN: "(" >
+| < RPAREN: ")" >
+| < LBRACE: "{" >
+| < RBRACE: "}" >
+| < SEMICOLON: ";" >
+| < COMMA: "," >
+| < DOT: "." >
+}
+
+/* OPERATORS */
+
+TOKEN :
+{
+  < ASSIGN: "=" >
+| < EQ: "==" >
+| < LE: "<=" >
+| < GT: ">" >
+| < LT: "<" >
+| < GE: ">=" >
+| < NE: "!=" >
+| < OR: "||" >
+| < AND: "&&" >
+| < NOT: "!" >
+| < PLUS: "+" >
+| < MINUS: "-" >
+| < PROD: "*" >
+| < DIV: "/" >
+| < MOD: "%" >
+| < TILDE: "~" >
+| < BIT_AND: "&" >
+| < BIT_OR: "|" >
+| < XOR: "^" >
+| < RS_SHIFT: ">>" >
+| < RU_SHIFT: ">>>" >
+| < L_SHIFT: "<<" >
+}
+
+
+/**************************************************************/
+/*         EL ANÁLISIS DE LA CABECERA COMIENZA AQUÍ           */
+/**************************************************************/
+
+/**
+ * Reconoce el contenido completo de un archivo ".tinto"
+ *
+ * CompilationUnit ::= (InportClause)* TintoDecl
+ */
+LibraryDeclaration tryCompilationUnit(String name):
+{
+  int[] lsync = { };
+  int[] rsync = { EOF };
+  LibraryDeclaration library = null;
+}
+{ 
+  try
+  {
+    library = parseCompilationUnit(name)
+    <EOF>
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return library;
+  }
+}
+
+/**
+ * Reconoce el contenido completo de un archivo ".tinto"
+ *
+ * CompilationUnit ::= (InportClause)* TintoDecl
+ */
+LibraryDeclaration parseCompilationUnit(String name):
+{
+  Vector<String> imported = new Vector<String>();
+  LibraryDeclaration library;
+}
+{ 
+  ( tryImportClause(imported) )*
+  library = tryTintoDecl(name, imported)
+  {
+    return library;
+  }
+}
+
+/**
+ * Reconoce una clausula de importación
+ *
+ * ImportClause ::= <IMPORT> <IDENTIFIER> <SEMICOLON> 
+ */
+void tryImportClause(Vector<String> imported):
+{
+  int[] lsync = { SEMICOLON };
+  int[] rsync = { IMPORT, LIBRARY, NATIVE };
+}
+{
+  try
+  {
+    parseImportClause(imported)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+}
+
+/**
+ * Reconoce una clausula de importación
+ *
+ * ImportClause ::= <IMPORT> <IDENTIFIER> <SEMICOLON> 
+ */
+void parseImportClause(Vector<String> imported):
+{
+  Token tid;
+}
+{
+  <IMPORT>
+  tid = <IDENTIFIER>
+  <SEMICOLON>
+  {
+    imported.add(tid.image);
+  }  
+}
+
+/**
+ * Reconoce la declaración de una biblioteca (normal o nativa)
+ *
+ * TintoDecl ::=  LibraryDecl |  NativeDecl 
+ */
+LibraryDeclaration tryTintoDecl(String name, Vector<String> imported) :
+{
+  int[] lsync = { };
+  int[] rsync = { };
+  LibraryDeclaration decl = null;
+}
+{
+  try
+  {
+    decl = parseTintoDecl(name, imported)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }  
+  {
+    return decl;
+  }
+}
+
+/**
+ * Reconoce la declaración de una biblioteca (normal o nativa)
+ *
+ * TintoDecl ::=  LibraryDecl |  NativeDecl 
+ */
+LibraryDeclaration parseTintoDecl(String name, Vector<String> imported) :
+{
+	LibraryDeclaration decl;
+}
+{
+  (
+    decl = tryLibraryDecl(name,imported)
+  |
+    decl = tryNativeDecl(name,imported)
+  )
+  {
+    return decl;
+  }
+}
+
+/**
+ * Reconoce la declaración de una biblioteca
+ *
+ * LibraryDecl ::=  <LIBRARY> <IDENTIFIER> <LBRACE> ( FunctionDecl )* <RBRACE> 
+ */
+LibraryDeclaration tryLibraryDecl(String name, Vector<String> imported) :
+{
+  int[] lsync = { };
+  int[] rsync = { };
+  LibraryDeclaration library = new LibraryDeclaration(name);
+  library.setImportedList(imported); 
+}
+{
+  try
+  {
+    parseLibraryDecl(library)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }  
+  {
+    return library;
+  }
+}
+
+/**
+ * Reconoce la declaración de una biblioteca
+ *
+ * LibraryDecl ::=  <LIBRARY> <IDENTIFIER> <LBRACE> ( FunctionDecl )* <RBRACE> 
+ */
+void parseLibraryDecl(LibraryDeclaration library) :
+{
+  Token tid;
+}
+{
+  <LIBRARY>
+  tid = <IDENTIFIER>
+  { verifyLibraryName(tid,library); }
+  <LBRACE>
+  ( tryFunctionDecl(library) )*
+  <RBRACE> 
+}
+
+/**
+ * Reconoce la declaración de una función
+ *
+ * FunctionDecl ::= Access FunctionType <IDENTIFIER> ArgumentDecl FunctionBody
+ */
+void tryFunctionDecl(LibraryDeclaration library) :
+{
+  int[] lsync = { };
+  int[] rsync = { PUBLIC, PRIVATE }; 
+}
+{
+  try
+  {
+    parseFunctionDecl(library)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }  
+}
+
+/**
+ * Reconoce la declaración de una función
+ *
+ * FunctionDecl ::= Access FunctionType <IDENTIFIER> ArgumentDecl FunctionBody
+ */
+void parseFunctionDecl(LibraryDeclaration library) :
+{
+  int acc;
+  int type;
+  Token tid;
+  Vector<Variable> args;
+}
+{
+  acc = tryAccess()
+  type = tryFunctionType()
+  tid = <IDENTIFIER>
+  args = tryArgumentDecl()
+  FunctionBody()
+  {
+    actionLibraryFunction(acc,type,tid,args,library);
+  } 
+}
+
+/**
+ * Reconoce la declaración de una biblioteca nativa
+ *
+ * NativeDecl ::=  <NATIVE> <IDENTIFIER> <LBRACE> ( NativeFunction )* <RBRACE> 
+ */
+LibraryDeclaration tryNativeDecl(String name, Vector<String> imported) :
+{
+  int[] lsync = { };
+  int[] rsync = { };
+  LibraryDeclaration library = new LibraryDeclaration(name);
+  library.setImportedList(imported);
+  library.setNative(true); 
+}
+{
+  try
+  {
+    parseNativeDecl(library)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }  
+  {
+    return library;
+  }
+}
+
+/**
+ * Reconoce la declaración de una biblioteca nativa
+ *
+ * NativeDecl ::=  <NATIVE> <IDENTIFIER> <LBRACE> ( NativeFunction )* <RBRACE> 
+ */
+void parseNativeDecl(LibraryDeclaration library) :
+{
+  Token tid;
+}
+{
+  <NATIVE>
+  tid = <IDENTIFIER>
+  { verifyLibraryName(tid,library); }
+  <LBRACE>
+  ( tryNativeFunction(library) )*
+  <RBRACE> 
+}
+
+/**
+ * Reconoce la declaración de una función de una biblioteca nativa
+ *
+ * NativeFunction ::= Access FunctionType <IDENTIFIER> ArgumentDecl <SEMICOLON>
+ */
+void tryNativeFunction(LibraryDeclaration library) :
+{
+  int[] lsync = { };
+  int[] rsync = { PUBLIC, PRIVATE }; 
+}
+{
+  try
+  {
+    parseNativeFunction(library)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }  
+}
+
+/**
+ * Reconoce la declaración de una función de una biblioteca nativa
+ *
+ * NativeFunction ::= Access FunctionType <IDENTIFIER> ArgumentDecl <SEMICOLON>
+ */
+void parseNativeFunction(LibraryDeclaration library) :
+{
+  int acc;
+  int type;
+  Token tid;
+  Vector<Variable> args;
+}
+{
+  acc = tryAccess()
+  type = tryFunctionType()
+  tid = <IDENTIFIER>
+  args = tryArgumentDecl()
+  <SEMICOLON>
+  {
+    actionLibraryFunction(acc,type,tid,args,library);
+  } 
+}
+
+/**
+ * Reconoce un modificador de acceso
+ *
+ * Access ::= <PUBLIC> | <PRIVATE>
+ */
+int tryAccess() :
+{
+  int[] lsync = { };
+  int[] rsync = { VOID, INT, CHAR, BOOLEAN };
+  int acc = Access.PUBLIC_ACCESS; 
+}
+{
+  try
+  {
+    acc = parseAccess()
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return acc;
+  }
+}
+
+/**
+ * Reconoce un modificador de acceso
+ *
+ * Access ::= <PUBLIC> | <PRIVATE>
+ */
+int parseAccess() :
+{
+  int acc;
+}
+{
+  (    <PUBLIC> { acc = Access.PUBLIC_ACCESS; }
+  |
+    <PRIVATE> { acc = Access.PRIVATE_ACCESS; }
+  )
+  {
+    return acc;
+  }
+}
+
+/**
+ * Reconoce el tipo de datos que devuelve una función
+ *
+ * FunctionType ::= Type | <VOID>
+ */
+int tryFunctionType() :
+{
+  int[] lsync = { };
+  int[] rsync = { IDENTIFIER };
+  int type = Type.MISMATCH_TYPE;
+}
+{
+  try
+  {
+    type = parseFunctionType()
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return type;
+  }
+}
+
+/**
+ * Reconoce el tipo de datos que devuelve una función
+ *
+ * FunctionType ::= Type | <VOID>
+ */
+int parseFunctionType() :
+{
+  int type = Type.MISMATCH_TYPE;
+}
+{
+  (    type = tryType()
+  |
+    <VOID> {  type = Type.VOID_TYPE; }
+  )
+  {
+    return type;
+  }
+}
+
+
+/**
+ * Reconoce un tipo de datos básico
+ *
+ * Type ::= <INT> | <CHAR> | <BOOLEAN>
+ */
+int tryType() :
+{
+  int[] lsync = { };
+  int[] rsync = { IDENTIFIER };
+  int type = Type.MISMATCH_TYPE;
+}
+{
+  try
+  {
+    type = parseType()
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return type;
+  }
+}
+
+/**
+ * Reconoce un tipo de datos básico
+ *
+ * Type ::= <INT> | <CHAR> | <BOOLEAN>
+ */
+int parseType() :
+{
+  int type;
+}
+{
+  (    <INT> { type = Type.INT_TYPE; }
+  |
+    <CHAR> { type = Type.CHAR_TYPE; }
+  |
+    <BOOLEAN> { type = Type.BOOLEAN_TYPE; }
+  )
+  {
+    return type;
+  }
+}
+
+/**
+ * Reconoce la declaración de argumentos de una función
+ *
+ * ArgumentDecl ::= <LPAREN> ( Argument ( <COMMA> Argument )* )? <RPAREN>
+ */
+Vector<Variable> tryArgumentDecl() :
+{
+  int[] lsync = { RPAREN };
+  int[] rsync = { LBRACE };
+  Vector<Variable> args = null;
+}
+{
+  try
+  {
+    args = parseArgumentDecl()
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+  {
+    return args;
+  }
+}
+
+/**
+ * Reconoce la declaración de argumentos de una función
+ *
+ * ArgumentDecl ::= <LPAREN> ( Argument ( <COMMA> Argument )* )? <RPAREN>
+ */
+Vector<Variable> parseArgumentDecl() :
+{
+  Vector<Variable> args = new Vector<Variable>();
+}
+{
+  <LPAREN>
+  (
+    tryArgument(args)
+    (
+      <COMMA>
+      tryArgument(args)
+    )*
+  )?
+  <RPAREN>
+  {
+    return args;
+  }
+}
+
+/**
+ * Reconoce la declaración de un argumento
+ *
+ * Argument ::= Type <IDENTIFIER>
+ */
+void tryArgument(Vector<Variable> args) :
+{
+  int[] lsync = { };
+  int[] rsync = { COMMA, RPAREN };
+}
+{
+  try
+  {
+    parseArgument(args)
+  }
+  catch(Exception ex)
+  {
+    catchError(ex);
+    skipTo(lsync,rsync);
+  }
+}
+
+/**
+ * Reconoce la declaración de un argumento
+ *
+ * Argument ::= Type <IDENTIFIER>
+ */
+void parseArgument(Vector<Variable> args) :
+{
+  int type;
+  Token tid;
+}
+{
+  type = tryType()
+  tid = <IDENTIFIER>
+  {
+    actionAddArgument(type,tid,args);
+  }
+}
+
+JAVACODE
+void FunctionBody()
+{
+  Token tk = getNextToken();  // Consume el caracter "{"
+  int level = 1;
+  while(level != 0)
+  {
+    tk = getNextToken();
+	if(tk.kind == EOF) break;
+    else if(tk.kind == LBRACE) level ++;
+    else if(tk.kind == RBRACE) level --;
+  }
+}
+
+JAVACODE
+void skipTo(int[] left, int[] right)
+{
+  Token prev = getToken(0);
+  Token next = getToken(1);
+  boolean flag = false;
+  if(prev.kind == EOF || next.kind == EOF) flag = true;
+  for(int i=0; i<left.length; i++) if(prev.kind == left[i]) flag = true;
+  for(int i=0; i<right.length; i++) if(next.kind == right[i]) flag = true;
+	
+  while(!flag)
+  {
+    getNextToken();
+    prev = getToken(0);
+    next = getToken(1);
+    if(prev.kind == EOF || next.kind == EOF) flag = true;
+    for(int i=0; i<left.length; i++) if(prev.kind == left[i]) flag = true;
+    for(int i=0; i<right.length; i++) if(next.kind == right[i]) flag = true;
+  }
+}

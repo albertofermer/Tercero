@@ -1,0 +1,6 @@
+[File Main.tinto] 2 errors found:
+Parse exception at row 16, column 16.
+  Type mismatch.
+Parse exception at row 16, column 9.
+  Type mismatch.
+

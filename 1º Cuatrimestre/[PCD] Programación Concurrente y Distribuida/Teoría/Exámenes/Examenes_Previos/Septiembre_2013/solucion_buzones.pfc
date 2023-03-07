@@ -1,0 +1,126 @@
+program dosrecursos;
+
+const
+	np1=3;
+	np2=3;
+	np3=3;
+
+var 
+
+	pedir_mitad_P1: mailbox of integer;
+	pedir_mitad_P2: mailbox of integer;
+	pedir_total: mailbox of integer;
+	soltar_mitad: mailbox of integer;
+	soltar_total: mailbox of integer;
+	permiso: array[1..3] of mailbox of integer;
+
+
+process type P1(id:integer);
+var
+	testigo:integer;
+begin
+	for i:=1 to 3 do	
+	begin
+		send(pedir_mitad_P1, id);
+		receive(permiso[1], testigo)
+
+		writeln('-->Proceso tipo P1 ',id,' usando Registro');
+
+		send(soltar_mitad, testigo);
+	end
+end; 
+
+process type P2(id:integer);
+var
+	testigo:integer;
+begin
+	for i:=1 to 3 do	
+	begin
+		send(pedir_mitad_P2, id);
+		receive(permiso[2], testigo)
+
+		writeln('-->Proceso tipo P2 ',id,' usando Registro');
+
+		send(soltar_mitad, testigo);
+	end
+end; 
+
+process type P3(id:integer);
+var
+	testigo:integer;
+begin
+	for i:=1 to 3 do	
+	begin
+		send(pedir_total, id);
+		receive(permiso[3], testigo)
+
+		writeln('-->Proceso tipo P3 ',id,' usando Registro');
+
+		send(soltar_total, testigo);
+
+	end
+end; 
+
+
+process Controlador;
+var
+	id:integer;
+	testigo:integer;
+	libre:integer;
+
+
+begin
+	libre:=2;
+	testigo:=1;
+
+	repeat
+		pri select
+			when libre=2 =>
+				receive(pedir_total,id);
+				libre:=libre-2;
+				send(permiso[3], testigo);
+
+		or
+			when empty(pedir_total) and libre>0 =>
+				receive(pedir_mitad_P2,id);
+				libre:=libre-1;
+				send(permiso[2], testigo);
+
+		or	
+			when empty(pedir_total) and libre>0 =>
+				receive(pedir_mitad_P1,id);
+				libre:=libre-1;
+				send(permiso[1], testigo);
+
+		or
+			receive(soltar_mitad,testigo);
+			libre:=libre+1;
+
+		or
+			receive(soltar_total,testigo);
+			libre:=libre+2;
+	
+		end select;
+				
+	forever
+end;
+
+var
+   i,j,k: integer;
+   PR1: array[1..np1] of P1;
+   PR2: array[1..np2] of P2;
+   PR3: array[1..np3] of P3;
+
+begin
+  cobegin
+	Controlador;
+    for i := 1 to np1 do PR1[i](i);
+    for j := 1 to np2 do PR2[j](j);
+    for k := 1 to np3 do PR3[k](k);
+
+  coend
+end.
+
+
+
+

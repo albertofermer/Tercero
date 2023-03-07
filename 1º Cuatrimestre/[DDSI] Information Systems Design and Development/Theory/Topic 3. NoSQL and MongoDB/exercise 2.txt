@@ -1,0 +1,10 @@
+use sample_restaurants
+1.1) db.restaurants.updateOne({name:"Riviera Caterer"},{$addToSet: {"comments": {author: "Louis",date: ISODate("2021-03-06"),text: "Where are we going to end up?. Really expensive"}}})
+1.2) db.restaurants.updateOne({name:"Wilken'S Fine Food"},{$addToSet: {comments: {author:"Joe",date: ISODate("2021-03-06"), text: "Good price, good quality"}}})
+
+2.1) db.restaurants.updateOne({name: "Riviera Caterer"}, {$addToSet:{directly_neighborhoods: ObjectId("55cb9c666c522cafdb053a1a")}})
+     db.restaurants.updateOne({name: "Riviera Caterer"}, {$addToSet:{directly_neighborhoods: ObjectId("55cb9c666c522cafdb053a1b")}})
+     db.restaurants.updateOne({name: "Riviera Caterer"}, {$addToSet:{directly_neighborhoods: ObjectId("55cb9c666c522cafdb053a1c")}})
+
+2.2) db.restaurants.updateOne({name: "Wilken'S Fine Food"}, {$addToSet:{directly_neighborhoods: ObjectId("55cb9c666c522cafdb053a1c")}})
+     db.restaurants.updateOne({name: "Wilken'S Fine Food"}, {$addToSet:{directly_neighborhoods: ObjectId("55cb9c666c522cafdb053a1d")}})

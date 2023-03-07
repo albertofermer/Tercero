@@ -1,0 +1,56 @@
+l = new ReentrantReadWriteLock(fair = true | false); // true:  Establece un orden de llegada.
+						     // false: Los lectores son más propensos a entrar.
+
+l.readLock.lock(); //entralector
+(h1..h7)
+----
+l.readLock.unlock(); //salelector
+
+
+l.writeLock().lock(); //entraescritor
+(h8..h10)
+----
+l.writeLock().unlock(); //salelector
+
+
+readlock.lock()
+readlock.unlock()
+
+writelock.lock()
+
+escribir();
+
+readlock.lock()
+writelock.unlock()
+leer():
+readlock.unlock()
+
+
+
+
+
+
+
+Una vez que ha usado el recurso el 25% del tiempo que necesita, decidirá si
+cambia su rol a escritor. La probabilidad de cambiar el rol a escritor será del
+25%. Si no cambia el rol a escritor, seguirá su ejecución normal.
+
+	Escritor
+		write.lock()
+		<<escribir>>
+		sleep(3000);
+		write.unlock()
+
+	Lector
+		read.lock
+		<<leer>>
+		read.unlock
+		sleep(4000  *25%)
+			if (random%100 < 25)
+				write.lock
+				sleep(4000*50%)
+		read.lock
+		write.unlock
+		
+		sleep(4000 * 25%)
+		read.unlock

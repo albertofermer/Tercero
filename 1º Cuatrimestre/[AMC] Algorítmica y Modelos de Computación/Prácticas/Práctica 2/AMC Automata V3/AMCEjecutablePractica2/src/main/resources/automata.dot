@@ -1,0 +1,12 @@
+digraph {
+	rankdir = LR
+x -> 0[color=blue]
+x [shape=none,fontsize=1,margin=0,width=0.01]
+0
+1 [color=red]
+2 [color=red]
+0 -> 1 [label=1]
+0 -> 2 [label=1]
+0[shape=doublecircle]
+1[shape=doublecircle]
+}

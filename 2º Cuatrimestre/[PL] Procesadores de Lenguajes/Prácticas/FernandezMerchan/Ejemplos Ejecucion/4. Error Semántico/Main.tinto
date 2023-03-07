@@ -1,0 +1,30 @@
+
+import Console;
+
+/**
+ * Aplicación para probar los operadores
+ * de bit.
+ */
+library Main {
+
+  /**
+   * Punto de entrada de la aplicación
+   */
+  public void Main() 
+  {
+    int a = ~42;
+    int c = 'c'&2;
+    
+
+  }
+
+
+  /**
+   * Imprime un número entero en la consola
+   */
+  private void imprimir(int i) 
+  {
+    Console.print(i);
+    Console.print('\n');
+  }
+}

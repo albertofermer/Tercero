@@ -1,0 +1,80 @@
+
+addpath('./Funciones');
+addpath('./ImagenesPractica5/Entrenamiento');
+
+%% 1.0 Lectura Automática de Imágenes
+nombres{1}='Circulo';
+nombres{2} = 'Cuadrado';
+nombres{3} = 'Triangulo';
+
+numClases = 3;
+numImagenesPorClase = 2;
+
+for i=1:numClases
+    for j=1:numImagenesPorClase
+        
+        nombre_Imagen = [nombres{i} num2str(j,'%02d') '.jpg']
+        I = imread(nombre_Imagen);
+        
+    end
+end
+
+
+%% 1.1 Binarizar con Metodología de Selección Automáticas de Umbral
+%
+%   Generar Ibin.
+%   Usar las funciones de selección de umbral de histogramas
+%   funcion_min_entre_max, funcion_isodata y funcion_otsu.
+%
+X = []; 
+Y = [];
+
+%% PARA CADA IMAGEN:
+
+for i=1:numClases
+    for j=1:numImagenesPorClase
+        
+        nombre_Imagen = [nombres{i} num2str(j,'%02d') '.jpg'];
+        I = imread(nombre_Imagen);
+        T = funcion_otsu(I);
+        Ib = I < T;
+
+%% 1.2 Eliminación de Componentes Conexas Ruidosas
+%
+%   COMPONENTE RUIDOSA:
+%   COMPONENTES DE MENOS DEL 0.1% DEL NÚMERO TOTAL DE PÍXELES DE LA IMAGEN
+%   O NÚMERO DE PÍXELES MENOR AL AREA DEL OBJETO MAYOR /5
+%   SE DEBE CUMPLIR CUALQUIERA DE LAS DOS CONDICIONES
+%   Para ello, se debe programar la siguiente funcion:
+%       IbinFilt = funcion_elimina_regiones_ruidosas(Ibin);
+
+    
+ IbinFilt = funcion_elimina_regiones_ruidosas(Ib);
+
+
+%% 1.3 Etiquetado
+%    Genera matriz etiquetada Ietiq y número N de agrupaciones conexas
+
+
+
+
+%% 1.4 Cálculo de los 23 descriptores de cada agrupación conexa
+%   Genera Ximagen - matriz de N filas y 23 columnas (los 23 descriptores
+%    generados en el orden indicado en la práctica)
+%        XImagen = funcion_calcula_descriptores_imagen(Ietiq,N);
+
+
+
+
+
+%% 1.5 Generar YImagen
+%   Genera Yimagen - matriz de N filas y 1 columna con la codificación
+%   empleada para la clase a la que pertenecen los objetos de la imagen
+
+    end
+end
+rmpath('./ImagenesEjemploLetrasXY/')
+
+rmpath('./Funciones/');
+
+

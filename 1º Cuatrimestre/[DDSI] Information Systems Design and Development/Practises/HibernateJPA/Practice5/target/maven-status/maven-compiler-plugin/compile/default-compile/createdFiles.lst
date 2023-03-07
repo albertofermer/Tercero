@@ -1,0 +1,5 @@
+Model\Activity.class
+Model\Member1.class
+Model\Trainer.class
+Application\HibernateUtil.class
+Application\ThisIsHibernate.class

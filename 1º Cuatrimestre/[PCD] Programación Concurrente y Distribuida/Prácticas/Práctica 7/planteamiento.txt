@@ -1,0 +1,88 @@
+Traducir bloque sincronizado a un lock.
+
+class C{
+
+	synchronized m1(){
+		--- wait();
+	}
+
+
+
+
+	synchronized m2(){
+		--- wait();
+	}	
+
+}
+//Hacer dos colas {teoria,practicas}
+Si un alumno sale de revisar teoria con el profesor sin portatil siempre despierta a uno de teoria.
+Cuando sale uno de practicas despertara a uno de practicas si hay, sino despertará a uno de teoría.
+//Despierta solo a la cola correspondiente
+
+
+
+class C{
+
+	lock mutex = new ReentrantLock(false); //true justa - false injusta
+	condition g = mutex.newCondition(); //cola de esperaa
+	m1(){
+	  mutex.lock()
+	try{
+		c.await();
+	}	
+	finally{mutex.unlock();}
+	}
+
+	m2(){
+	  mutex.lock()
+	try{
+		c.signal();		
+	}	
+	finally{mutex.unlock();}
+	}
+
+}
+
+
+
+
+2 tipos de alumnos
+	- teoria
+	- practicas
+
+Delegar el problema a una clase Revision donde tendré las variables de estado y los métodos.
+
+	libreProfesorPortatil; //2
+	libreProfesorSinPortatil;
+
+	entraRevisarTeoria()
+	saleRevisarTeoria()
+	entraRevisarPractica()
+	saleRevisarPractica()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
